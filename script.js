@@ -1,16 +1,47 @@
-// ===== State =====
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+
+const SUPABASE_URL =
+    'https://onmrexiyhzyytmfwbvsr.supabase.co';
+
+const SUPABASE_ANON_KEY =
+    'sb_publishable_kFcJ3JeFtjagz0aa-r2WRA_hUUOT8uU';
+
+const SUPABASE_BUCKET =
+    'dental-lab-portfolio';
+
+const SUPABASE_HEADERS = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json'
+};
+
+
+// ============================================================
+// STORAGE PATHS
+// ============================================================
+
+const PORTFOLIO_ROOT = 'portfolio';
+const PRICING_ROOT = 'pricing';
+const AUDIO_PATH = 'audio/background-music.mp3';
+
+
+// ============================================================
+// CACHE / STATE
+// ============================================================
+
+let projectsData = [];
+let pricingData = [];
+
+let projectsLoaded = false;
+let pricingLoaded = false;
+
 let currentProjectId = null;
-let currentProjectData = {};
-let isMusicPlaying = false;
+let currentProjectData = null;
+
 let currentLogoPosition = 'left';
-
-
-// ============================================================
-// PROJECT DATA
-// ============================================================
-// LOCAL_PROJECTS is loaded from projects.generated.js.
-// Run build.ps1 after changing the contents of the الصور folder.
-// ============================================================
+let isMusicPlaying = false;
 
 
 // ============================================================
@@ -18,7 +49,6 @@ let currentLogoPosition = 'left';
 // ============================================================
 
 let viewerImages = [];
-
 let viewerIndex = 0;
 
 let viewerZoom = 1;
@@ -35,667 +65,1017 @@ let viewerOffset = {
     y: 0
 };
 
+let viewerInitialized = false;
+
 
 // ============================================================
 // DOM REFERENCES
 // ============================================================
 
-const projectsContainer =
-    document.getElementById('projectsContainer');
-
-const projectModal =
-    document.getElementById('projectModal');
-
-const projectModalBody =
-    document.getElementById('projectModalBody');
-
-const projectModalTitle =
-    document.getElementById('projectModalTitle');
-
-const musicControl =
-    document.getElementById('musicControl');
-
-const backgroundMusic =
-    document.getElementById('backgroundMusic');
-
-const labLogo =
-    document.getElementById('labLogo');
-
 const heroGrid =
-    document.getElementById('heroGrid');
+    document.getElementById(
+        'heroGrid'
+    );
 
 const pricingScrollContainer =
-    document.getElementById('pricingScrollContainer');
+    document.getElementById(
+        'pricingScrollContainer'
+    );
 
 const pricingScrollTrack =
-    document.getElementById('pricingScrollTrack');
+    document.getElementById(
+        'pricingScrollTrack'
+    );
 
 const pricingScrollWrapper =
-    document.getElementById('pricingScrollWrapper');
+    document.getElementById(
+        'pricingScrollWrapper'
+    );
+
+const projectModal =
+    document.getElementById(
+        'projectModal'
+    );
+
+const projectModalBody =
+    document.getElementById(
+        'projectModalBody'
+    );
+
+const projectModalTitle =
+    document.getElementById(
+        'projectModalTitle'
+    );
+
+const labLogo =
+    document.getElementById(
+        'labLogo'
+    );
+
+const musicControl =
+    document.getElementById(
+        'musicControl'
+    );
+
+const backgroundMusic =
+    document.getElementById(
+        'backgroundMusic'
+    );
 
 
 // ============================================================
-// HELPERS
+// GENERAL HELPERS
 // ============================================================
 
 function showOverlay(element) {
 
-    if (!element) return;
+    if (!element) {
+        return;
+    }
 
     element.style.display = 'flex';
-
 }
 
 
 function hideOverlay(element) {
 
-    if (!element) return;
-
-    element.style.display = 'none';
-
-}
-
-
-// ============================================================
-// LOGO POSITIONING - انتقال سلس
-// ============================================================
-
-function setLogoPosition(position) {
-    if (!labLogo) return;
-    if (currentLogoPosition === position) return;
-    
-    // إزالة جميع الكلاسات السابقة
-    labLogo.classList.remove('position-left', 'position-center', 'position-right');
-    
-    // إضافة الكلاس الجديد مع transition سلس
-    if (position === 'left') {
-        labLogo.classList.add('position-left');
-        labLogo.style.left = '20px';
-        labLogo.style.right = 'auto';
-        labLogo.style.top = '12px';
-        labLogo.style.transform = 'scale(1)';
-        labLogo.style.width = '110px';
-        labLogo.style.height = '110px';
-        labLogo.style.animation = '';
-    } else if (position === 'center') {
-        labLogo.classList.add('position-center');
-        labLogo.style.left = '50%';
-        labLogo.style.right = 'auto';
-        labLogo.style.top = '50%';
-        labLogo.style.transform = 'translate(-50%, -50%) scale(1.3)';
-        labLogo.style.width = '160px';
-        labLogo.style.height = '160px';
-    } else if (position === 'right') {
-        labLogo.classList.add('position-right');
-        labLogo.style.right = '20px';
-        labLogo.style.left = 'auto';
-        labLogo.style.top = '12px';
-        labLogo.style.transform = 'scale(1)';
-        labLogo.style.width = '110px';
-        labLogo.style.height = '110px';
-        labLogo.style.animation = '';
-    }
-    
-    currentLogoPosition = position;
-}
-
-
-// ============================================================
-// MUSIC
-// ============================================================
-
-function setupMusic() {
-
-    if (!backgroundMusic || !musicControl) {
+    if (!element) {
         return;
     }
 
-    function updateMusicButton() {
+    element.style.display = 'none';
+}
 
-        musicControl.innerHTML = isMusicPlaying
-            ? '<i class="fas fa-pause"></i>'
-            : '<i class="fas fa-music"></i>';
 
-        musicControl.setAttribute(
-            'aria-label',
-            isMusicPlaying
-                ? 'إيقاف الموسيقى'
-                : 'تشغيل الموسيقى'
-        );
+function escapeHtml(value) {
 
-        musicControl.title =
-            isMusicPlaying
-                ? 'إيقاف الموسيقى'
-                : 'تشغيل الموسيقى';
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+
+function encodePath(path) {
+
+    return String(path || '')
+        .split('/')
+        .map(
+            part =>
+                encodeURIComponent(part)
+        )
+        .join('/');
+}
+
+
+function storageUrl(path) {
+
+    if (!path) {
+        return '';
     }
 
 
-    function tryPlayMusic() {
+    if (
+        /^https?:\/\//i.test(path)
+    ) {
 
-        const promise =
-            backgroundMusic.play();
+        return path;
+
+    }
+
+
+    return (
+        `${SUPABASE_URL}` +
+        `/storage/v1/object/public/` +
+        `${SUPABASE_BUCKET}/` +
+        encodePath(path)
+    );
+}
+
+
+function extensionOf(name) {
+
+    const match =
+        String(name || '')
+            .toLowerCase()
+            .match(
+                /\.([a-z0-9]+)$/
+            );
+
+
+    return match
+        ? match[1]
+        : '';
+}
+
+
+function mediaTypeFromName(name) {
+
+    const ext =
+        extensionOf(name);
+
+
+    if (
+        [
+            'jpg',
+            'jpeg',
+            'png',
+            'webp',
+            'gif',
+            'bmp',
+            'avif',
+            'svg'
+        ].includes(ext)
+    ) {
+
+        return 'image';
+
+    }
+
+
+    if (
+        [
+            'mp4',
+            'webm',
+            'ogg',
+            'mov',
+            'm4v',
+            'avi'
+        ].includes(ext)
+    ) {
+
+        return 'video';
+
+    }
+
+
+    if (
+        ext === 'pdf'
+    ) {
+
+        return 'pdf';
+
+    }
+
+
+    if (
+        [
+            'mp3',
+            'wav',
+            'm4a',
+            'aac',
+            'flac'
+        ].includes(ext)
+    ) {
+
+        return 'audio';
+
+    }
+
+
+    return 'file';
+}
+
+
+function isFolder(item) {
+
+    return (
+        item &&
+        !item.id &&
+        !item.metadata
+    );
+}
+
+
+function sortItems(items) {
+
+    return [...items].sort(
+        (a, b) => {
+
+            return String(
+                a?.name || ''
+            ).localeCompare(
+                String(
+                    b?.name || ''
+                ),
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: 'base'
+                }
+            );
+
+        }
+    );
+}
+
+
+function displayName(name) {
+
+    const value =
+        String(name || '')
+            .trim();
+
+
+    if (!value) {
+        return 'بدون اسم';
+    }
+
+
+    return value
+        .replace(
+            /[-_]+/g,
+            ' '
+        )
+        .replace(
+            /\s+/g,
+            ' '
+        )
+        .trim();
+}
+
+
+function mediaDescription(filename) {
+
+    if (!filename) {
+        return '';
+    }
+
+
+    return String(filename)
+        .replace(
+            /\.[^/.]+$/,
+            ''
+        )
+        .replace(
+            /[-_]+/g,
+            ' '
+        )
+        .replace(
+            /\s+/g,
+            ' '
+        )
+        .trim();
+}
+
+
+// ============================================================
+// STORAGE
+// ============================================================
+
+async function listStorage(
+    prefix = ''
+) {
+
+    const body = {
+
+        prefix,
+
+        limit: 1000,
+
+        offset: 0,
+
+        sortBy: {
+            column: 'name',
+            order: 'asc'
+        }
+
+    };
+
+
+    const response =
+        await fetch(
+            `${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_BUCKET}`,
+            {
+                method: 'POST',
+
+                headers:
+                    SUPABASE_HEADERS,
+
+                body:
+                    JSON.stringify(
+                        body
+                    )
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const text =
+            await response.text();
+
+        throw new Error(
+            `Supabase Storage ${response.status}: ${text}`
+        );
+    }
+
+
+    const data =
+        await response.json();
+
+
+    return Array.isArray(data)
+        ? data
+        : [];
+}
+
+
+// ============================================================
+// RECURSIVE STORAGE READER
+// ============================================================
+
+async function listAllFilesRecursively(
+    prefix = ''
+) {
+
+    const result = [];
+
+    const items =
+        sortItems(
+            await listStorage(
+                prefix
+            )
+        );
+
+
+    for (
+        const item of items
+    ) {
+
+        const currentPath =
+            prefix
+                ? `${prefix}/${item.name}`
+                : item.name;
+
 
         if (
-            promise &&
-            typeof promise.then === 'function'
+            isFolder(item)
         ) {
 
-            promise
-                .then(() => {
+            const nested =
+                await listAllFilesRecursively(
+                    currentPath
+                );
 
-                    isMusicPlaying = true;
 
-                    updateMusicButton();
-
-                })
-                .catch(() => {
-
-                    isMusicPlaying = false;
-
-                    updateMusicButton();
-
-                });
+            result.push(
+                ...nested
+            );
 
         }
 
         else {
 
-            isMusicPlaying = true;
+            result.push({
 
-            updateMusicButton();
+                ...item,
+
+                path:
+                    currentPath,
+
+                url:
+                    storageUrl(
+                        currentPath
+                    ),
+
+                type:
+                    mediaTypeFromName(
+                        item.name
+                    )
+
+            });
 
         }
 
     }
 
 
-    tryPlayMusic();
+    return result;
+}
 
 
-    const startAfterInteraction = () => {
+// ============================================================
+// PROJECT LOADER
+// STRUCTURE:
+//
+// portfolio/
+//   project-name/
+//      cover/
+//          cover.png
+//      media/
+//          image.jpg
+//          another-image.png
+// ============================================================
 
-        if (!isMusicPlaying) {
+async function fetchProjectsFromStorage() {
 
-            tryPlayMusic();
-
-        }
-
-
-        document.removeEventListener(
-            'pointerdown',
-            startAfterInteraction
+    const rootItems =
+        sortItems(
+            await listStorage(
+                PORTFOLIO_ROOT
+            )
         );
 
 
-        document.removeEventListener(
-            'keydown',
-            startAfterInteraction
+    const projectFolders =
+        rootItems.filter(
+            item =>
+                isFolder(item)
         );
 
 
-        document.removeEventListener(
-            'touchstart',
-            startAfterInteraction
+    /*
+     * نقرأ المشاريع بالتوازي.
+     */
+
+    const projects =
+        await Promise.all(
+
+            projectFolders.map(
+                async (
+                    folder,
+                    index
+                ) => {
+
+                    const projectName =
+                        folder.name;
+
+
+                    const projectPath =
+                        `${PORTFOLIO_ROOT}/${projectName}`;
+
+
+                    /*
+                     * نقرأ محتويات فولدر المشروع
+                     */
+
+                    const children =
+                        await listStorage(
+                            projectPath
+                        );
+
+
+                    /*
+                     * COVER ثابت:
+                     *
+                     * project/cover/cover.png
+                     */
+
+                    const coverPath =
+                        `${projectPath}/cover/cover.png`;
+
+
+                    const coverUrl =
+                        storageUrl(
+                            coverPath
+                        );
+
+
+                    /*
+                     * MEDIA FOLDER
+                     */
+
+                    const mediaFolder =
+                        children.find(
+                            item =>
+                                isFolder(item) &&
+                                String(
+                                    item.name
+                                )
+                                    .toLowerCase()
+                                    ===
+                                    'media'
+                        );
+
+
+                    let media = [];
+
+
+                    if (
+                        mediaFolder
+                    ) {
+
+                        const mediaPath =
+                            `${projectPath}/${mediaFolder.name}`;
+
+
+                        const mediaFiles =
+                            sortItems(
+                                await listStorage(
+                                    mediaPath
+                                )
+                            );
+
+
+                        media =
+                            mediaFiles
+                                .filter(
+                                    item =>
+                                        !isFolder(item)
+                                )
+                                .map(
+                                    item => {
+
+                                        const fullPath =
+                                            `${mediaPath}/${item.name}`;
+
+
+                                        return {
+
+                                            name:
+                                                item.name,
+
+                                            description:
+                                                mediaDescription(
+                                                    item.name
+                                                ),
+
+                                            path:
+                                                fullPath,
+
+                                            url:
+                                                storageUrl(
+                                                    fullPath
+                                                ),
+
+                                            type:
+                                                mediaTypeFromName(
+                                                    item.name
+                                                )
+
+                                        };
+
+                                    }
+                                );
+
+                    }
+
+
+                    return {
+
+                        id:
+                            projectPath,
+
+                        name:
+                            displayName(
+                                projectName
+                            ),
+
+                        folderName:
+                            projectName,
+
+                        path:
+                            projectPath,
+
+                        order:
+                            index,
+
+                        cover:
+                            coverUrl,
+
+                        coverPath:
+                            coverPath,
+
+                        media:
+                            media
+
+                    };
+
+                }
+            )
         );
 
-    };
+
+    return projects;
+}
 
 
-    document.addEventListener(
-        'pointerdown',
-        startAfterInteraction,
-        {
-            passive: true
-        }
-    );
+async function ensureProjectsLoaded() {
+
+    if (
+        projectsLoaded
+    ) {
+
+        return;
+
+    }
 
 
-    document.addEventListener(
-        'keydown',
-        startAfterInteraction,
-        {
-            passive: true
-        }
-    );
+    projectsData =
+        await fetchProjectsFromStorage();
 
 
-    document.addEventListener(
-        'touchstart',
-        startAfterInteraction,
-        {
-            passive: true
-        }
-    );
+    projectsLoaded =
+        true;
+}
 
 
-    musicControl.addEventListener(
-        'click',
-        e => {
+// ============================================================
+// PROJECT CARDS
+// ============================================================
 
-            e.stopPropagation();
+function renderProjects() {
+
+    if (!heroGrid) {
+        return;
+    }
 
 
-            if (isMusicPlaying) {
+    heroGrid.innerHTML =
+        '';
 
-                backgroundMusic.pause();
 
-                isMusicPlaying = false;
+    if (
+        !projectsData.length
+    ) {
 
-                updateMusicButton();
+        heroGrid.innerHTML = `
+
+            <div
+                class="empty-hint"
+                style="grid-column:1/-1;"
+            >
+
+                <i
+                    class="fas fa-images"
+                ></i>
+
+                <p>
+                    لا توجد مشاريع لعرضها
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    const fragment =
+        document.createDocumentFragment();
+
+
+    projectsData.forEach(
+        project => {
+
+            const item =
+                document.createElement(
+                    'button'
+                );
+
+
+            item.type =
+                'button';
+
+
+            item.className =
+                'hero-item';
+
+
+            item.title =
+                project.name;
+
+
+            /*
+             * Cover
+             */
+
+            if (
+                project.cover
+            ) {
+
+                const image =
+                    document.createElement(
+                        'img'
+                    );
+
+
+                image.src =
+                    project.cover;
+
+
+                image.alt =
+                    project.name;
+
+
+                image.loading =
+                    'lazy';
+
+
+                image.decoding =
+                    'async';
+
+
+                item.appendChild(
+                    image
+                );
 
             }
 
             else {
 
-                tryPlayMusic();
+                const placeholder =
+                    document.createElement(
+                        'div'
+                    );
+
+
+                placeholder.style.cssText = `
+                    width:100%;
+                    height:100%;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:var(--blue-ll);
+                    font-size:3rem;
+                    background:var(--bg2);
+                `;
+
+
+                placeholder.innerHTML =
+                    '<i class="fas fa-folder-open"></i>';
+
+
+                item.appendChild(
+                    placeholder
+                );
 
             }
+
+
+            /*
+             * Name
+             */
+
+            const label =
+                document.createElement(
+                    'div'
+                );
+
+
+            label.className =
+                'hero-label';
+
+
+            label.textContent =
+                project.name;
+
+
+            item.appendChild(
+                label
+            );
+
+
+            /*
+             * Open
+             */
+
+            item.addEventListener(
+                'click',
+                () => {
+
+                    openProject(
+                        project.id
+                    );
+
+                }
+            );
+
+
+            fragment.appendChild(
+                item
+            );
 
         }
     );
 
 
-    updateMusicButton();
-
+    heroGrid.appendChild(
+        fragment
+    );
 }
 
 
 // ============================================================
-// قائمة الأسعار - صور من مجلد price list (بدون أسماء/أرقام)
-// ============================================================
-
-const PRICING_IMAGES = [
-    { file: 'price list/1.png' },
-    { file: 'price list/2.png' },
-    { file: 'price list/3.png' },
-    { file: 'price list/4.png' },
-    { file: 'price list/5.png' },
-    { file: 'price list/6.png' }
-];
-
-
-// ============================================================
-// تحميل صور المنتجات
-// ============================================================
-
-function loadHeroImages() {
-    if (!heroGrid) return;
-
-    const projects = LOCAL_PROJECTS.slice(0, 5);
-
-    if (!projects.length) {
-        heroGrid.innerHTML = `
-            <div class="empty-hint" style="grid-column: 1 / -1;">
-                <i class="fas fa-images"></i>
-                <p>لا توجد صور لعرضها</p>
-            </div>
-        `;
-        return;
-    }
-
-    heroGrid.innerHTML = '';
-
-    projects.forEach((project, index) => {
-        const item = document.createElement('div');
-        item.className = 'hero-item';
-
-        const img = document.createElement('img');
-        img.src = project.cover;
-        img.alt = project.name || `صورة ${index + 1}`;
-        img.loading = 'lazy';
-
-        img.onerror = function () {
-            console.error('صورة غير موجودة:', this.src);
-            this.style.display = 'none';
-        };
-
-        const label = document.createElement('div');
-        label.className = 'hero-label';
-        label.textContent = project.name || 'بدون اسم';
-
-        item.addEventListener('click', () => {
-            openProject(project.id, project.cover, project.name);
-        });
-
-        item.appendChild(img);
-        item.appendChild(label);
-        heroGrid.appendChild(item);
-    });
-}
-
-
-// ============================================================
-// تحميل صور قائمة الأسعار (سكرول أفقي - بدون نصوص)
-// ============================================================
-
-function loadPricingImages() {
-    if (!pricingScrollTrack) return;
-
-    pricingScrollTrack.innerHTML = '';
-
-    PRICING_IMAGES.forEach((item) => {
-        const div = document.createElement('div');
-        div.className = 'pricing-scroll-item';
-
-        const img = document.createElement('img');
-        img.src = item.file;
-        img.alt = 'قائمة الأسعار';
-        img.loading = 'lazy';
-
-        img.onerror = function () {
-            console.error('صورة غير موجودة:', this.src);
-        };
-
-        div.addEventListener('click', () => {
-            window.open(item.file, '_blank');
-        });
-
-        div.appendChild(img);
-        pricingScrollTrack.appendChild(div);
-    });
-
-    // تمرير إلى المنتصف بعد تحميل الصور
-    setTimeout(() => {
-        centerPricingScroll();
-    }, 150);
-}
-
-
-// ============================================================
-// توسيط السكرول الأفقي
-// ============================================================
-
-function centerPricingScroll() {
-    if (!pricingScrollWrapper || !pricingScrollTrack) return;
-
-    const wrapperWidth = pricingScrollWrapper.offsetWidth;
-    const trackWidth = pricingScrollTrack.scrollWidth;
-
-    if (trackWidth > wrapperWidth) {
-        const scrollAmount = (trackWidth - wrapperWidth) / 2;
-        pricingScrollWrapper.scrollLeft = scrollAmount;
-    }
-}
-
-
-// ============================================================
-// أزرار التنقل العلوية
-// ============================================================
-
-function setupNavButtons() {
-    const navProducts = document.getElementById('navProductsBtn');
-    const navAbout = document.getElementById('navAboutBtn');
-    const navPricing = document.getElementById('navPricingBtn');
-
-    // تغيير نص زر عننا إلى "شعارنا"
-    if (navAbout) {
-        navAbout.textContent = 'شعارنا';
-    }
-
-    // زر قائمة الأسعار (في الجهة اليسرى)
-    if (navPricing) {
-        navPricing.addEventListener('click', () => {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            navPricing.classList.add('active');
-
-            if (heroGrid) {
-                heroGrid.style.display = 'none';
-            }
-            if (pricingScrollContainer) {
-                pricingScrollContainer.style.display = 'flex';
-                loadPricingImages();
-            }
-
-            setLogoPosition('right');
-        });
-    }
-
-    // زر شعارنا (في المنتصف) - عرض الصورة مع تأثير ظهور تدريجي
-    if (navAbout) {
-        navAbout.addEventListener('click', () => {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            navAbout.classList.add('active');
-
-            if (heroGrid) {
-                heroGrid.style.display = 'flex';
-                heroGrid.style.flexDirection = 'column';
-                heroGrid.style.justifyContent = 'center';
-                heroGrid.style.alignItems = 'center';
-                heroGrid.style.minHeight = '70vh';
-                heroGrid.style.width = '100%';
-                heroGrid.style.padding = '20px';
-                heroGrid.innerHTML = `
-                    <div style="
-                        width: 100%;
-                        max-width: 900px;
-                        height: 70vh;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        padding: 20px;
-                    ">
-                        <img src="abute us.png" alt="شعار معمل حاتم المصري" style="
-                            width: 100%;
-                            height: 100%;
-                            object-fit: contain;
-                            opacity: 0;
-                            transition: opacity 1.5s ease-in-out;
-                        " id="aboutLogoImage">
-                    </div>
-                `;
-
-                // بعد 2 ثانية، تبدأ الصورة في الظهور التدريجي
-                setTimeout(() => {
-                    const img = document.getElementById('aboutLogoImage');
-                    if (img) {
-                        img.style.opacity = '1';
-                    }
-                }, 2000);
-            }
-            if (pricingScrollContainer) {
-                pricingScrollContainer.style.display = 'none';
-            }
-
-            setLogoPosition('center');
-        });
-    }
-
-    // زر منتجاتنا (في الجهة اليمنى)
-    if (navProducts) {
-        navProducts.addEventListener('click', () => {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            navProducts.classList.add('active');
-
-            if (heroGrid) {
-                heroGrid.style.display = 'grid';
-                heroGrid.style.minHeight = 'auto';
-                heroGrid.style.flexDirection = 'row';
-                heroGrid.style.justifyContent = 'normal';
-                heroGrid.style.alignItems = 'normal';
-                heroGrid.style.padding = '0';
-                loadHeroImages();
-            }
-            if (pricingScrollContainer) {
-                pricingScrollContainer.style.display = 'none';
-            }
-
-            setLogoPosition('left');
-        });
-    }
-
-    // تفعيل زر منتجاتنا افتراضياً
-    if (navProducts) {
-        navProducts.classList.add('active');
-    }
-}
-
-
-// ============================================================
-// OPEN PROJECT
+// PROJECT MODAL
 // ============================================================
 
 function openProject(
-    projectId,
-    cover,
-    name
+    projectId
 ) {
 
     const project =
-        LOCAL_PROJECTS.find(
+        projectsData.find(
             item =>
-                item.id === projectId
+                item.id ===
+                projectId
         );
 
 
     if (!project) {
-
-        console.error(
-            'Project not found:',
-            projectId
-        );
-
         return;
-
     }
 
 
     currentProjectId =
-        projectId;
+        project.id;
 
 
-    currentProjectData = {
-
-        photoURL:
-            cover,
-
-        name:
-            name,
-
-        images:
-            project.images || []
-
-    };
+    currentProjectData =
+        project;
 
 
-    if (projectModalTitle) {
+    if (
+        projectModalTitle
+    ) {
 
         projectModalTitle.textContent =
-            name;
+            project.name;
 
     }
 
 
-    if (projectModalBody) {
-
-        projectModalBody.innerHTML =
-            '<div class="loading-state"><div class="spinner"></div></div>';
-
-    }
+    buildProjectBody(
+        project
+    );
 
 
-    showOverlay(projectModal);
-
-
-    refreshProjectBody();
-
+    showOverlay(
+        projectModal
+    );
 }
 
 
-// ============================================================
-// BUILD PROJECT BODY
-// ============================================================
+function buildProjectBody(
+    project
+) {
 
-function refreshProjectBody() {
-
-    if (!projectModalBody) {
-
+    if (
+        !projectModalBody
+    ) {
         return;
-
     }
 
 
-    const images =
-        currentProjectData.images || [];
+    projectModalBody.innerHTML =
+        '';
 
 
     const body =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
 
 
     body.className =
         'proj-body-inner';
 
 
-    // ========================================================
-    // COVER
-    // ========================================================
+    /*
+     * Cover
+     */
 
-    const cover =
-        document.createElement('div');
+    if (
+        project.cover
+    ) {
 
-
-    cover.className =
-        'proj-cover';
-
-
-    const coverImage =
-        document.createElement('img');
-
-
-    coverImage.src =
-        currentProjectData.photoURL;
-
-
-    coverImage.alt =
-        currentProjectData.name;
-
-
-    coverImage.onerror =
-        function () {
-
-            console.error(
-                'Cover image not found:',
-                this.src
+        const cover =
+            document.createElement(
+                'div'
             );
 
 
-            cover.style.display =
-                'none';
-
-        };
+        cover.className =
+            'proj-cover';
 
 
-    cover.appendChild(
-        coverImage
-    );
+        const image =
+            document.createElement(
+                'img'
+            );
 
 
-    body.appendChild(
-        cover
-    );
+        image.src =
+            project.cover;
 
 
-    // ========================================================
-    // VIEWER IMAGES
-    // ========================================================
+        image.alt =
+            project.name;
+
+
+        image.loading =
+            'eager';
+
+
+        image.decoding =
+            'async';
+
+
+        cover.appendChild(
+            image
+        );
+
+
+        body.appendChild(
+            cover
+        );
+
+    }
+
+
+    /*
+     * Media
+     */
+
+    const media =
+        Array.isArray(
+            project.media
+        )
+            ? project.media
+            : [];
+
+
+    const imageFiles =
+        media.filter(
+            item =>
+                item.type ===
+                'image'
+        );
+
+
+    /*
+     * Prepare viewer data
+     */
 
     viewerImages =
-        images.map(
-            url => ({
-                url: url,
-                desc: ''
+        imageFiles.map(
+            item => ({
+
+                url:
+                    item.url,
+
+                desc:
+                    item.description,
+
+                name:
+                    item.name
+
             })
         );
 
 
-    // ========================================================
-    // NO CONTENT
-    // ========================================================
-
-    if (!images.length) {
+    if (
+        !media.length
+    ) {
 
         const empty =
-            document.createElement('div');
+            document.createElement(
+                'div'
+            );
 
 
         empty.className =
@@ -704,10 +1084,12 @@ function refreshProjectBody() {
 
         empty.innerHTML = `
 
-            <i class="fas fa-images"></i>
+            <i
+                class="fas fa-images"
+            ></i>
 
             <p>
-                لا توجد محتويات إضافية لهذا المشروع
+                لا توجد وسائط داخل هذا المشروع
             </p>
 
         `;
@@ -719,80 +1101,252 @@ function refreshProjectBody() {
 
     }
 
-
-    // ========================================================
-    // CONTENT GRID
-    // ========================================================
-
     else {
 
         const grid =
-            document.createElement('div');
+            document.createElement(
+                'div'
+            );
 
 
         grid.className =
             'media-grid';
 
 
-        images.forEach(
-            (url, index) => {
+        media.forEach(
+            mediaItem => {
 
                 const card =
-                    document.createElement('div');
+                    document.createElement(
+                        'div'
+                    );
 
 
                 card.className =
                     'media-card';
 
 
-                const image =
-                    document.createElement('img');
+                /*
+                 * IMAGE
+                 */
 
+                if (
+                    mediaItem.type ===
+                    'image'
+                ) {
 
-                image.src =
-                    url;
-
-
-                image.alt =
-                    currentProjectData.name;
-
-
-                image.className =
-                    'mc-img';
-
-
-                image.onerror =
-                    function () {
-
-                        console.error(
-                            'Content image not found:',
-                            this.src
+                    const image =
+                        document.createElement(
+                            'img'
                         );
 
 
-                        card.style.display =
-                            'none';
-
-                    };
+                    image.className =
+                        'mc-img';
 
 
-                image.addEventListener(
-                    'click',
-                    () => {
+                    image.src =
+                        mediaItem.url;
 
-                        openViewer(
-                            'image',
-                            index,
-                            ''
+
+                    image.alt =
+                        mediaItem.description ||
+                        mediaItem.name;
+
+
+                    image.title =
+                        mediaItem.description ||
+                        mediaItem.name;
+
+
+                    image.loading =
+                        'lazy';
+
+
+                    image.decoding =
+                        'async';
+
+
+                    image.addEventListener(
+                        'click',
+                        event => {
+
+                            event.preventDefault();
+
+
+                            const index =
+                                viewerImages.findIndex(
+                                    viewerItem =>
+                                        viewerItem.url ===
+                                        mediaItem.url
+                                );
+
+
+                            if (
+                                index >= 0
+                            ) {
+
+                                openViewer(
+                                    index
+                                );
+
+                            }
+
+                        }
+                    );
+
+
+                    card.appendChild(
+                        image
+                    );
+
+                }
+
+
+                /*
+                 * VIDEO
+                 */
+
+                else if (
+                    mediaItem.type ===
+                    'video'
+                ) {
+
+                    const video =
+                        document.createElement(
+                            'video'
                         );
 
-                    }
-                );
+
+                    video.className =
+                        'mc-video';
 
 
-                card.appendChild(
-                    image
-                );
+                    video.src =
+                        mediaItem.url;
+
+
+                    video.controls =
+                        true;
+
+
+                    video.preload =
+                        'metadata';
+
+
+                    video.playsInline =
+                        true;
+
+
+                    card.appendChild(
+                        video
+                    );
+
+                }
+
+
+                /*
+                 * PDF / OTHER
+                 */
+
+                else {
+
+                    const link =
+                        document.createElement(
+                            'a'
+                        );
+
+
+                    link.className =
+                        'mc-icon';
+
+
+                    link.href =
+                        mediaItem.url;
+
+
+                    link.target =
+                        '_blank';
+
+
+                    link.rel =
+                        'noopener';
+
+
+                    link.innerHTML =
+                        mediaItem.type ===
+                        'pdf'
+
+                            ?
+
+                        `
+                            <i
+                                class="fas fa-file-pdf"
+                                style="
+                                    color:#ef5350;
+                                    font-size:2.5rem;
+                                "
+                            ></i>
+                        `
+
+                            :
+
+                        `
+                            <i
+                                class="fas fa-file"
+                            ></i>
+                        `;
+
+
+                    card.appendChild(
+                        link
+                    );
+
+                }
+
+
+                /*
+                 * Description
+                 */
+
+                if (
+                    mediaItem.description
+                ) {
+
+                    const info =
+                        document.createElement(
+                            'div'
+                        );
+
+
+                    info.className =
+                        'mc-info';
+
+
+                    const description =
+                        document.createElement(
+                            'span'
+                        );
+
+
+                    description.className =
+                        'mc-desc';
+
+
+                    description.textContent =
+                        mediaItem.description;
+
+
+                    info.appendChild(
+                        description
+                    );
+
+
+                    card.appendChild(
+                        info
+                    );
+
+                }
 
 
                 grid.appendChild(
@@ -810,108 +1364,97 @@ function refreshProjectBody() {
     }
 
 
-    projectModalBody.innerHTML =
-        '';
-
-
     projectModalBody.appendChild(
         body
     );
-
 }
 
 
 // ============================================================
-// IMAGE VIEWER
+// PROJECT MODAL CONTROLS
 // ============================================================
 
-window.openViewer =
-function (
-    type,
-    urlOrIndex,
-    desc
-) {
+function setupProjectToolbar() {
 
-    const existing =
+    const closeButton =
+        document.getElementById(
+            'closeProjectModal'
+        );
+
+
+    if (
+        closeButton
+    ) {
+
+        closeButton.addEventListener(
+            'click',
+            () => {
+
+                hideOverlay(
+                    projectModal
+                );
+
+            }
+        );
+
+    }
+
+
+    if (
+        projectModal
+    ) {
+
+        projectModal.addEventListener(
+            'click',
+            event => {
+
+                if (
+                    event.target ===
+                    projectModal
+                ) {
+
+                    hideOverlay(
+                        projectModal
+                    );
+
+                }
+
+            }
+        );
+
+    }
+}
+
+
+// ============================================================
+// VIEWER - CREATE ONCE
+// ============================================================
+
+function ensureViewer() {
+
+    let overlay =
         document.getElementById(
             'viewerOverlay'
         );
 
 
-    if (existing) {
+    if (
+        overlay &&
+        viewerInitialized
+    ) {
 
-        existing.remove();
-
+        return overlay;
     }
 
 
-    if (type !== 'image') {
+    /*
+     * Create
+     */
 
-        return;
-
-    }
-
-
-    viewerIndex =
-        Number(urlOrIndex);
-
-
-    viewerZoom =
-        1;
-
-
-    viewerOffset = {
-
-        x: 0,
-
-        y: 0
-
-    };
-
-
-    _buildImageViewer();
-
-};
-
-
-// ============================================================
-// BUILD IMAGE VIEWER
-// ============================================================
-
-function _buildImageViewer() {
-
-    const existing =
-        document.getElementById(
-            'viewerOverlay'
+    overlay =
+        document.createElement(
+            'div'
         );
-
-
-    if (existing) {
-
-        existing.remove();
-
-    }
-
-
-    const item =
-        viewerImages[
-            viewerIndex
-        ];
-
-
-    if (!item) {
-
-        return;
-
-    }
-
-
-    const total =
-        viewerImages.length;
-
-
-    const overlay =
-        document.createElement('div');
 
 
     overlay.id =
@@ -924,38 +1467,57 @@ function _buildImageViewer() {
 
     overlay.innerHTML = `
 
-        <div class="viewer-box viewer-box--img">
+        <div
+            class="viewer-box viewer-box--img"
+            role="dialog"
+            aria-modal="true"
+        >
+
+            <!-- CLOSE -->
 
             <button
                 class="viewer-close"
-                id="viewerClose">
+                id="viewerClose"
+                type="button"
+                aria-label="إغلاق"
+                title="إغلاق"
+            >
 
-                <i class="fas fa-times"></i>
+                <i
+                    class="fas fa-times"
+                ></i>
 
             </button>
 
 
-            <div class="viewer-top-bar">
+            <!-- TOP BAR -->
 
-                <span class="viewer-counter">
+            <div
+                class="viewer-top-bar"
+            >
 
-                    ${viewerIndex + 1}
-
-                    /
-
-                    ${total}
-
+                <span
+                    class="viewer-counter"
+                    id="viewerCounter"
+                >
+                    1 / 1
                 </span>
 
 
-                <div class="viewer-zoom-btns">
+                <div
+                    class="viewer-zoom-btns"
+                >
 
                     <button
                         class="vzoom-btn"
                         id="vzoomIn"
-                        title="تكبير">
+                        type="button"
+                        title="تكبير"
+                    >
 
-                        <i class="fas fa-search-plus"></i>
+                        <i
+                            class="fas fa-search-plus"
+                        ></i>
 
                     </button>
 
@@ -963,9 +1525,13 @@ function _buildImageViewer() {
                     <button
                         class="vzoom-btn"
                         id="vzoomOut"
-                        title="تصغير">
+                        type="button"
+                        title="تصغير"
+                    >
 
-                        <i class="fas fa-search-minus"></i>
+                        <i
+                            class="fas fa-search-minus"
+                        ></i>
 
                     </button>
 
@@ -973,68 +1539,95 @@ function _buildImageViewer() {
                     <button
                         class="vzoom-btn"
                         id="vzoomReset"
-                        title="إعادة ضبط">
+                        type="button"
+                        title="إعادة ضبط"
+                    >
 
-                        <i class="fas fa-compress"></i>
+                        <i
+                            class="fas fa-compress"
+                        ></i>
 
                     </button>
 
+
+                    <a
+                        class="viewer-open-btn"
+                        id="viewerOpen"
+                        href="#"
+                        target="_blank"
+                        rel="noopener"
+                        title="فتح الصورة"
+                    >
+
+                        <i
+                            class="fas fa-external-link-alt"
+                        ></i>
+
+                    </a>
+
                 </div>
-
-
-                <a
-                    href="${item.url}"
-                    target="_blank"
-                    class="viewer-open-btn"
-                    title="فتح في نافذة جديدة">
-
-                    <i class="fas fa-external-link-alt"></i>
-
-                </a>
 
             </div>
 
 
+            <!-- IMAGE AREA -->
+
             <div
                 class="viewer-img-area"
-                id="viewerImgArea">
+                id="viewerImgArea"
+            >
 
                 <img
-                    src="${item.url}"
                     class="viewer-img"
                     id="viewerImg"
+                    src=""
+                    alt=""
                     draggable="false"
                 >
 
             </div>
 
 
-            ${
-                total > 1
-                ?
-                `
+            <!-- PREVIOUS -->
 
-                <button
-                    class="viewer-nav viewer-prev"
-                    id="viewerPrev">
+            <button
+                class="viewer-nav viewer-prev"
+                id="viewerPrev"
+                type="button"
+                aria-label="الصورة السابقة"
+                title="الصورة السابقة"
+            >
 
-                    <i class="fas fa-chevron-right"></i>
+                <i
+                    class="fas fa-chevron-right"
+                ></i>
 
-                </button>
+            </button>
 
 
-                <button
-                    class="viewer-nav viewer-next"
-                    id="viewerNext">
+            <!-- NEXT -->
 
-                    <i class="fas fa-chevron-left"></i>
+            <button
+                class="viewer-nav viewer-next"
+                id="viewerNext"
+                type="button"
+                aria-label="الصورة التالية"
+                title="الصورة التالية"
+            >
 
-                </button>
+                <i
+                    class="fas fa-chevron-left"
+                ></i>
 
-                `
-                :
-                ''
-            }
+            </button>
+
+
+            <!-- DESCRIPTION -->
+
+            <div
+                class="viewer-description"
+                id="viewerDescription"
+            ></div>
 
         </div>
 
@@ -1046,40 +1639,32 @@ function _buildImageViewer() {
     );
 
 
-    _applyZoom();
+    viewerInitialized =
+        true;
 
 
-    // ========================================================
-    // CLOSE - فقط عند الضغط على زر الإكس
-    // ========================================================
-
-    document
-        .getElementById('viewerClose')
-        .addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                _cleanupViewer();
-                overlay.remove();
-            }
-        );
-
-
-    // ========================================================
-    // منع إغلاق النافذة عند الضغط على الصورة أو الخلفية
-    // ========================================================
-
-    overlay.addEventListener(
-        'click',
-        (e) => {
-            e.stopPropagation();
-        }
+    bindViewerEvents(
+        overlay
     );
 
 
-    // ========================================================
-    // NAVIGATION
-    // ========================================================
+    return overlay;
+}
+
+
+// ============================================================
+// VIEWER EVENTS
+// ============================================================
+
+function bindViewerEvents(
+    overlay
+) {
+
+    const closeButton =
+        document.getElementById(
+            'viewerClose'
+        );
+
 
     const previousButton =
         document.getElementById(
@@ -1093,94 +1678,29 @@ function _buildImageViewer() {
         );
 
 
-    if (previousButton) {
-
-        previousButton.addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                _navigateViewer(
-                    -1
-                );
-            }
-        );
-
-    }
-
-
-    if (nextButton) {
-
-        nextButton.addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                _navigateViewer(
-                    1
-                );
-            }
-        );
-
-    }
-
-
-    // ========================================================
-    // ZOOM BUTTONS
-    // ========================================================
-
-    document
-        .getElementById('vzoomIn')
-        .addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                _changeZoom(
-                    0.2
-                );
-            }
+    const zoomInButton =
+        document.getElementById(
+            'vzoomIn'
         );
 
 
-    document
-        .getElementById('vzoomOut')
-        .addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                _changeZoom(
-                    -0.2
-                );
-            }
+    const zoomOutButton =
+        document.getElementById(
+            'vzoomOut'
         );
 
 
-    document
-        .getElementById('vzoomReset')
-        .addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                viewerZoom =
-                    1;
-
-
-                viewerOffset = {
-
-                    x: 0,
-
-                    y: 0
-
-                };
-
-
-                _applyZoom();
-
-            }
+    const zoomResetButton =
+        document.getElementById(
+            'vzoomReset'
         );
 
 
-    // ========================================================
-    // MOUSE WHEEL
-    // ========================================================
+    const viewerOpenButton =
+        document.getElementById(
+            'viewerOpen'
+        );
+
 
     const imageArea =
         document.getElementById(
@@ -1188,21 +1708,146 @@ function _buildImageViewer() {
         );
 
 
+    const image =
+        document.getElementById(
+            'viewerImg'
+        );
+
+
+    /*
+     * CLOSE
+     */
+
+    closeButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            closeViewer();
+
+        };
+
+
+    /*
+     * PREVIOUS
+     */
+
+    previousButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            navigateViewer(
+                -1
+            );
+
+        };
+
+
+    /*
+     * NEXT
+     */
+
+    nextButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            navigateViewer(
+                1
+            );
+
+        };
+
+
+    /*
+     * ZOOM IN
+     */
+
+    zoomInButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            changeViewerZoom(
+                0.2
+            );
+
+        };
+
+
+    /*
+     * ZOOM OUT
+     */
+
+    zoomOutButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            changeViewerZoom(
+                -0.2
+            );
+
+        };
+
+
+    /*
+     * RESET
+     */
+
+    zoomResetButton.onclick =
+        event => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            viewerZoom =
+                1;
+
+
+            viewerOffset = {
+                x: 0,
+                y: 0
+            };
+
+
+            applyViewerTransform();
+
+        };
+
+
+    /*
+     * Open external
+     */
+
+    viewerOpenButton.onclick =
+        event => {
+
+            event.stopPropagation();
+
+        };
+
+
+    /*
+     * Mouse wheel
+     */
+
     imageArea.addEventListener(
         'wheel',
-        (e) => {
-            e.stopPropagation();
-            e.preventDefault();
+        event => {
 
+            event.preventDefault();
 
-            _changeZoom(
-
-                e.deltaY < 0
-
+            changeViewerZoom(
+                event.deltaY < 0
                     ? 0.15
-
                     : -0.15
-
             );
 
         },
@@ -1212,20 +1857,13 @@ function _buildImageViewer() {
     );
 
 
-    // ========================================================
-    // DRAG - السحب على الصورة عند التكبير
-    // ========================================================
+    /*
+     * Drag
+     */
 
-    const image =
-        document.getElementById(
-            'viewerImg'
-        );
-
-    // بدء السحب
     image.addEventListener(
         'mousedown',
-        (e) => {
-            e.stopPropagation();
+        event => {
 
             if (
                 viewerZoom <= 1
@@ -1243,11 +1881,11 @@ function _buildImageViewer() {
             viewerDragStart = {
 
                 x:
-                    e.clientX -
+                    event.clientX -
                     viewerOffset.x,
 
                 y:
-                    e.clientY -
+                    event.clientY -
                     viewerOffset.y
 
             };
@@ -1257,70 +1895,55 @@ function _buildImageViewer() {
                 'grabbing';
 
 
-            e.preventDefault();
+            event.preventDefault();
 
         }
     );
 
 
-    // حركة السحب على مستوى النافذة
-    window.addEventListener(
+    document.addEventListener(
         'mousemove',
-        _onDragMove
+        viewerMouseMove
     );
 
 
-    window.addEventListener(
+    document.addEventListener(
         'mouseup',
-        _onDragEnd
+        viewerMouseUp
     );
 
 
-    // ========================================================
-    // منع نقل الصورة أو فتحها في تبويب جديد
-    // ========================================================
+    /*
+     * Touch
+     */
 
-    image.addEventListener(
-        'dragstart',
-        (e) => {
-            e.preventDefault();
-        }
-    );
-
-
-    // ========================================================
-    // TOUCH / PINCH
-    // ========================================================
-
-    let lastPinchDistance =
-        null;
+    let pinchDistance = null;
 
 
     imageArea.addEventListener(
         'touchstart',
-        (e) => {
-            e.stopPropagation();
+        event => {
 
             if (
-                e.touches.length === 2
+                event.touches.length ===
+                2
             ) {
 
-                lastPinchDistance =
+                pinchDistance =
                     Math.hypot(
+                        event.touches[0].clientX -
+                        event.touches[1].clientX,
 
-                        e.touches[0].clientX -
-                        e.touches[1].clientX,
-
-                        e.touches[0].clientY -
-                        e.touches[1].clientY
-
+                        event.touches[0].clientY -
+                        event.touches[1].clientY
                     );
 
             }
 
 
             else if (
-                e.touches.length === 1 &&
+                event.touches.length ===
+                    1 &&
                 viewerZoom > 1
             ) {
 
@@ -1331,11 +1954,11 @@ function _buildImageViewer() {
                 viewerDragStart = {
 
                     x:
-                        e.touches[0].clientX -
+                        event.touches[0].clientX -
                         viewerOffset.x,
 
                     y:
-                        e.touches[0].clientY -
+                        event.touches[0].clientY -
                         viewerOffset.y
 
                 };
@@ -1351,61 +1974,58 @@ function _buildImageViewer() {
 
     imageArea.addEventListener(
         'touchmove',
-        (e) => {
-            e.stopPropagation();
+        event => {
 
             if (
-                e.touches.length === 2 &&
-                lastPinchDistance !== null
+                event.touches.length ===
+                    2 &&
+                pinchDistance !== null
             ) {
 
-                e.preventDefault();
+                event.preventDefault();
 
 
                 const distance =
                     Math.hypot(
+                        event.touches[0].clientX -
+                        event.touches[1].clientX,
 
-                        e.touches[0].clientX -
-                        e.touches[1].clientX,
-
-                        e.touches[0].clientY -
-                        e.touches[1].clientY
-
+                        event.touches[0].clientY -
+                        event.touches[1].clientY
                     );
 
 
-                _changeZoom(
-
+                changeViewerZoom(
                     (
                         distance -
-                        lastPinchDistance
+                        pinchDistance
                     ) * 0.005
-
                 );
 
 
-                lastPinchDistance =
+                pinchDistance =
                     distance;
 
             }
 
 
             else if (
-                e.touches.length === 1 &&
+                event.touches.length ===
+                    1 &&
                 viewerDragging
             ) {
 
                 viewerOffset.x =
-                    e.touches[0].clientX -
+                    event.touches[0].clientX -
                     viewerDragStart.x;
 
 
                 viewerOffset.y =
-                    e.touches[0].clientY -
+                    event.touches[0].clientY -
                     viewerDragStart.y;
 
 
-                _applyZoom();
+                applyViewerTransform();
 
             }
 
@@ -1418,100 +2038,520 @@ function _buildImageViewer() {
 
     imageArea.addEventListener(
         'touchend',
-        (e) => {
-            e.stopPropagation();
+        () => {
 
             viewerDragging =
                 false;
 
-
-            lastPinchDistance =
+            pinchDistance =
                 null;
 
         }
     );
 
 
-    // ========================================================
-    // KEYBOARD
-    // ========================================================
+    /*
+     * Keyboard
+     */
 
-    overlay._keyHandler =
-        (e) => {
-            e.stopPropagation();
+    document.addEventListener(
+        'keydown',
+        event => {
+
+            const currentViewer =
+                document.getElementById(
+                    'viewerOverlay'
+                );
+
 
             if (
-                e.key === 'ArrowRight'
+                !currentViewer ||
+                currentViewer.style.display ===
+                    'none'
             ) {
 
-                _navigateViewer(
+                return;
+
+            }
+
+
+            if (
+                event.key ===
+                'Escape'
+            ) {
+
+                closeViewer();
+
+            }
+
+
+            else if (
+                event.key ===
+                'ArrowRight'
+            ) {
+
+                navigateViewer(
                     -1
                 );
 
             }
 
 
-            if (
-                e.key === 'ArrowLeft'
+            else if (
+                event.key ===
+                'ArrowLeft'
             ) {
 
-                _navigateViewer(
+                navigateViewer(
                     1
                 );
 
             }
 
 
-            if (
-                e.key === 'Escape'
+            else if (
+                event.key ===
+                '+'
             ) {
 
-                _cleanupViewer();
-
-                overlay.remove();
-
-            }
-
-
-            if (
-                e.key === '+'
-            ) {
-
-                _changeZoom(
+                changeViewerZoom(
                     0.2
                 );
 
             }
 
 
-            if (
-                e.key === '-'
+            else if (
+                event.key ===
+                '-'
             ) {
 
-                _changeZoom(
+                changeViewerZoom(
                     -0.2
                 );
 
             }
 
-        };
+        }
+    );
 
 
-    document.addEventListener(
-        'keydown',
-        overlay._keyHandler
+    /*
+     * Prevent viewer content from closing it.
+     */
+
+    const viewerBox =
+        overlay.querySelector(
+            '.viewer-box'
+        );
+
+
+    viewerBox.addEventListener(
+        'click',
+        event => {
+
+            event.stopPropagation();
+
+        }
     );
 
 }
 
 
 // ============================================================
-// DRAG
+// SHOW VIEWER
 // ============================================================
 
-function _onDragMove(e) {
+function openViewer(
+    index
+) {
 
-    if (!viewerDragging) {
+    if (
+        !viewerImages.length
+    ) {
+
+        return;
+
+    }
+
+
+    const overlay =
+        ensureViewer();
+
+
+    viewerIndex =
+        Math.max(
+            0,
+            Math.min(
+                Number(index) || 0,
+                viewerImages.length - 1
+            )
+        );
+
+
+    viewerZoom =
+        1;
+
+
+    viewerOffset = {
+        x: 0,
+        y: 0
+    };
+
+
+    updateViewer();
+
+
+    overlay.style.display =
+        'flex';
+
+
+    overlay.setAttribute(
+        'aria-hidden',
+        'false'
+    );
+
+
+    document.body.style.overflow =
+        'hidden';
+
+}
+
+
+// ============================================================
+// UPDATE VIEWER WITHOUT REBUILDING IT
+// ============================================================
+
+function updateViewer() {
+
+    const item =
+        viewerImages[
+            viewerIndex
+        ];
+
+
+    if (!item) {
+        return;
+    }
+
+
+    const overlay =
+        ensureViewer();
+
+
+    const image =
+        document.getElementById(
+            'viewerImg'
+        );
+
+
+    const counter =
+        document.getElementById(
+            'viewerCounter'
+        );
+
+
+    const description =
+        document.getElementById(
+            'viewerDescription'
+        );
+
+
+    const openButton =
+        document.getElementById(
+            'viewerOpen'
+        );
+
+
+    const previousButton =
+        document.getElementById(
+            'viewerPrev'
+        );
+
+
+    const nextButton =
+        document.getElementById(
+            'viewerNext'
+        );
+
+
+    if (
+        image
+    ) {
+
+        image.src =
+            item.url;
+
+        image.alt =
+            item.desc ||
+            item.name ||
+            '';
+
+        image.title =
+            item.desc ||
+            item.name ||
+            '';
+
+    }
+
+
+    if (
+        counter
+    ) {
+
+        counter.textContent =
+            `${viewerIndex + 1} / ${viewerImages.length}`;
+
+    }
+
+
+    if (
+        description
+    ) {
+
+        description.textContent =
+            item.desc ||
+            item.name ||
+            '';
+
+    }
+
+
+    if (
+        openButton
+    ) {
+
+        openButton.href =
+            item.url;
+
+    }
+
+
+    const hasMultiple =
+        viewerImages.length >
+        1;
+
+
+    if (
+        previousButton
+    ) {
+
+        previousButton.style.display =
+            hasMultiple
+                ? 'flex'
+                : 'none';
+
+    }
+
+
+    if (
+        nextButton
+    ) {
+
+        nextButton.style.display =
+            hasMultiple
+                ? 'flex'
+                : 'none';
+
+    }
+
+
+    viewerZoom =
+        1;
+
+
+    viewerOffset = {
+        x: 0,
+        y: 0
+    };
+
+
+    applyViewerTransform();
+
+
+    if (
+        overlay.style.display !==
+        'flex'
+    ) {
+
+        overlay.style.display =
+            'flex';
+
+    }
+
+}
+
+
+// ============================================================
+// PREVIOUS / NEXT
+// ============================================================
+
+function navigateViewer(
+    direction
+) {
+
+    if (
+        viewerImages.length <=
+        1
+    ) {
+
+        return;
+
+    }
+
+
+    viewerIndex =
+        (
+            viewerIndex +
+            direction +
+            viewerImages.length
+        ) %
+        viewerImages.length;
+
+
+    updateViewer();
+
+}
+
+
+// ============================================================
+// CLOSE VIEWER
+// ============================================================
+
+function closeViewer() {
+
+    const overlay =
+        document.getElementById(
+            'viewerOverlay'
+        );
+
+
+    if (
+        !overlay
+    ) {
+
+        return;
+
+    }
+
+
+    overlay.style.display =
+        'none';
+
+
+    overlay.setAttribute(
+        'aria-hidden',
+        'true'
+    );
+
+
+    document.body.style.overflow =
+        '';
+
+}
+
+
+// ============================================================
+// VIEWER ZOOM
+// ============================================================
+
+function changeViewerZoom(
+    delta
+) {
+
+    viewerZoom =
+        Math.min(
+            5,
+            Math.max(
+                0.5,
+                viewerZoom + delta
+            )
+        );
+
+
+    applyViewerTransform();
+
+}
+
+
+function applyViewerTransform() {
+
+    const image =
+        document.getElementById(
+            'viewerImg'
+        );
+
+
+    if (
+        !image
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        viewerZoom <=
+        1
+    ) {
+
+        viewerOffset = {
+            x: 0,
+            y: 0
+        };
+
+    }
+
+
+    image.style.transform =
+        `
+        translate(
+            ${viewerOffset.x}px,
+            ${viewerOffset.y}px
+        )
+        scale(
+            ${viewerZoom}
+        )
+        `;
+
+
+    image.style.cursor =
+        viewerZoom > 1
+            ? 'grab'
+            : 'default';
+
+}
+
+
+// ============================================================
+// VIEWER DRAG
+// ============================================================
+
+function viewerMouseMove(
+    event
+) {
+
+    if (
+        !viewerDragging
+    ) {
+
+        return;
+
+    }
+
+
+    const overlay =
+        document.getElementById(
+            'viewerOverlay'
+        );
+
+
+    if (
+        !overlay ||
+        overlay.style.display !==
+            'flex'
+    ) {
 
         return;
 
@@ -1519,21 +2559,21 @@ function _onDragMove(e) {
 
 
     viewerOffset.x =
-        e.clientX -
+        event.clientX -
         viewerDragStart.x;
 
 
     viewerOffset.y =
-        e.clientY -
+        event.clientY -
         viewerDragStart.y;
 
 
-    _applyZoom();
+    applyViewerTransform();
 
 }
 
 
-function _onDragEnd() {
+function viewerMouseUp() {
 
     viewerDragging =
         false;
@@ -1545,7 +2585,9 @@ function _onDragEnd() {
         );
 
 
-    if (image) {
+    if (
+        image
+    ) {
 
         image.style.cursor =
             viewerZoom > 1
@@ -1558,230 +2600,719 @@ function _onDragEnd() {
 
 
 // ============================================================
-// ZOOM
+// PRICING
 // ============================================================
 
-function _applyZoom() {
+async function fetchPricingFromStorage() {
 
-    const image =
-        document.getElementById(
-            'viewerImg'
+    const files =
+        await listAllFilesRecursively(
+            PRICING_ROOT
         );
 
 
-    if (!image) {
+    return files.filter(
+        file =>
+            file.type ===
+            'image'
+    );
+}
+
+
+async function ensurePricingLoaded() {
+
+    if (
+        pricingLoaded
+    ) {
 
         return;
 
     }
 
 
+    pricingData =
+        await fetchPricingFromStorage();
+
+
+    pricingLoaded =
+        true;
+}
+
+
+function renderPricing() {
+
     if (
-        viewerZoom <= 1
+        !pricingScrollTrack
     ) {
-
-        viewerOffset = {
-
-            x: 0,
-
-            y: 0
-
-        };
-
-    }
-
-
-    image.style.transform =
-
-        `translate(
-            ${viewerOffset.x}px,
-            ${viewerOffset.y}px
-        )
-        scale(${viewerZoom})`;
-
-
-    image.style.cursor =
-        viewerZoom > 1
-            ? 'grab'
-            : 'default';
-
-}
-
-
-function _changeZoom(
-    delta
-) {
-
-    viewerZoom =
-        Math.min(
-
-            5,
-
-            Math.max(
-
-                0.5,
-
-                viewerZoom + delta
-
-            )
-
-        );
-
-
-    _applyZoom();
-
-}
-
-
-// ============================================================
-// NAVIGATE VIEWER
-// ============================================================
-
-function _navigateViewer(
-    direction
-) {
-
-    const total =
-        viewerImages.length;
-
-
-    if (!total) {
 
         return;
 
     }
 
 
-    viewerIndex =
-
-        (
-            viewerIndex +
-            direction +
-            total
-
-        ) % total;
-
-
-    viewerZoom =
-        1;
-
-
-    viewerOffset = {
-
-        x: 0,
-
-        y: 0
-
-    };
-
-
-    _cleanupViewer();
-
-
-    _buildImageViewer();
-
-}
-
-
-// ============================================================
-// CLOSE VIEWER
-// ============================================================
-
-function _resetAndClose(
-    overlay
-) {
-
-    _cleanupViewer();
-
-    overlay.remove();
-
-}
-
-
-function _cleanupViewer() {
-
-    window.removeEventListener(
-        'mousemove',
-        _onDragMove
-    );
-
-
-    window.removeEventListener(
-        'mouseup',
-        _onDragEnd
-    );
-
-
-    const overlay =
-        document.getElementById(
-            'viewerOverlay'
-        );
+    pricingScrollTrack.innerHTML =
+        '';
 
 
     if (
-        overlay &&
-        overlay._keyHandler
+        !pricingData.length
     ) {
 
-        document.removeEventListener(
-            'keydown',
-            overlay._keyHandler
-        );
+        pricingScrollTrack.innerHTML = `
 
+            <div
+                class="empty-hint"
+            >
+
+                <i
+                    class="fas fa-images"
+                ></i>
+
+                <p>
+                    لا توجد قائمة أسعار
+                </p>
+
+            </div>
+
+        `;
+
+        return;
     }
 
-}
+
+    const fragment =
+        document.createDocumentFragment();
 
 
-// ============================================================
-// PROJECT MODAL
-// ============================================================
+    pricingData.forEach(
+        item => {
 
-function setupProjectToolbar() {
-
-    const closeButton =
-        document.getElementById(
-            'closeProjectModal'
-        );
-
-
-    if (closeButton) {
-
-        closeButton.addEventListener(
-            'click',
-            () => {
-
-                hideOverlay(
-                    projectModal
+            const wrapper =
+                document.createElement(
+                    'div'
                 );
 
-            }
-        );
+
+            wrapper.className =
+                'pricing-page-image';
+
+
+            const image =
+                document.createElement(
+                    'img'
+                );
+
+
+            image.src =
+                item.url;
+
+            image.alt =
+                mediaDescription(
+                    item.name
+                );
+
+            image.loading =
+                'lazy';
+
+            image.decoding =
+                'async';
+
+
+            wrapper.appendChild(
+                image
+            );
+
+
+            fragment.appendChild(
+                wrapper
+            );
+
+        }
+    );
+
+
+    pricingScrollTrack.appendChild(
+        fragment
+    );
+}
+
+
+function showPricing() {
+
+    if (
+        heroGrid
+    ) {
+
+        heroGrid.style.display =
+            'none';
 
     }
 
 
-    if (projectModal) {
+    if (
+        pricingScrollContainer
+    ) {
 
-        projectModal.addEventListener(
-            'click',
-            e => {
+        pricingScrollContainer.style.display =
+            'flex';
+
+    }
+
+
+    if (
+        pricingLoaded
+    ) {
+
+        renderPricing();
+
+    }
+
+
+    setLogoPosition(
+        'right'
+    );
+}
+
+
+async function showPricingAndLoad() {
+
+    if (
+        heroGrid
+    ) {
+
+        heroGrid.style.display =
+            'none';
+
+    }
+
+
+    if (
+        pricingScrollContainer
+    ) {
+
+        pricingScrollContainer.style.display =
+            'flex';
+
+    }
+
+
+    try {
+
+        await ensurePricingLoaded();
+
+        renderPricing();
+
+    }
+    catch (error) {
+
+        console.error(
+            'Pricing load failed:',
+            error
+        );
+
+
+        if (
+            pricingScrollTrack
+        ) {
+
+            pricingScrollTrack.innerHTML = `
+
+                <div
+                    class="empty-hint"
+                >
+
+                    <i
+                        class="fas fa-triangle-exclamation"
+                    ></i>
+
+                    <p>
+                        تعذر تحميل قائمة الأسعار
+                    </p>
+
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+    setLogoPosition(
+        'right'
+    );
+}
+
+
+// ============================================================
+// ABOUT
+// ============================================================
+
+function showAbout() {
+
+    const button =
+        document.getElementById(
+            'navAboutBtn'
+        );
+
+
+    activateNav(
+        button
+    );
+
+
+    if (
+        heroGrid
+    ) {
+
+        heroGrid.style.display =
+            'flex';
+
+
+        heroGrid.style.flexDirection =
+            'column';
+
+
+        heroGrid.style.justifyContent =
+            'center';
+
+
+        heroGrid.style.alignItems =
+            'center';
+
+
+        heroGrid.style.minHeight =
+            '70vh';
+
+
+        heroGrid.style.width =
+            '100%';
+
+
+        heroGrid.style.padding =
+            '20px';
+
+
+        heroGrid.innerHTML = `
+
+            <div
+                class="about-image-container"
+            >
+
+                <img
+                    src="abute us.png"
+                    alt="شعار معمل حاتم المصري"
+                    id="aboutLogoImage"
+                >
+
+            </div>
+
+        `;
+
+
+        /*
+         * تبدأ الأنيميشن بعد ثانيتين.
+         */
+
+        setTimeout(
+            () => {
+
+                const image =
+                    document.getElementById(
+                        'aboutLogoImage'
+                    );
+
 
                 if (
-                    e.target === projectModal
+                    image
                 ) {
 
-                    hideOverlay(
-                        projectModal
+                    image.classList.add(
+                        'show'
                     );
 
                 }
 
-            }
+            },
+            2000
         );
 
     }
 
+
+    if (
+        pricingScrollContainer
+    ) {
+
+        pricingScrollContainer.style.display =
+            'none';
+
+    }
+
+
+    setLogoPosition(
+        'center'
+    );
+}
+
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+
+function showProducts() {
+
+    const button =
+        document.getElementById(
+            'navProductsBtn'
+        );
+
+
+    activateNav(
+        button
+    );
+
+
+    if (
+        pricingScrollContainer
+    ) {
+
+        pricingScrollContainer.style.display =
+            'none';
+
+    }
+
+
+    if (
+        heroGrid
+    ) {
+
+        heroGrid.style.display =
+            'grid';
+
+
+        heroGrid.style.flexDirection =
+            '';
+
+        heroGrid.style.justifyContent =
+            '';
+
+        heroGrid.style.alignItems =
+            '';
+
+        heroGrid.style.minHeight =
+            '';
+
+        heroGrid.style.width =
+            '';
+
+        heroGrid.style.padding =
+            '';
+
+    }
+
+
+    /*
+     * لا نقرأ Supabase مرة أخرى.
+     */
+
+    renderProjects();
+
+
+    setLogoPosition(
+        'left'
+    );
+}
+
+
+// ============================================================
+// NAV ACTIVATION
+// ============================================================
+
+function activateNav(
+    activeButton
+) {
+
+    document
+        .querySelectorAll(
+            '.nav-btn'
+        )
+        .forEach(
+            button =>
+                button.classList.remove(
+                    'active'
+                )
+        );
+
+
+    if (
+        activeButton
+    ) {
+
+        activeButton.classList.add(
+            'active'
+        );
+
+    }
+}
+
+
+// ============================================================
+// NAVIGATION SETUP
+// ============================================================
+
+function setupNavButtons() {
+
+    const navProducts =
+        document.getElementById(
+            'navProductsBtn'
+        );
+
+
+    const navAbout =
+        document.getElementById(
+            'navAboutBtn'
+        );
+
+
+    const navPricing =
+        document.getElementById(
+            'navPricingBtn'
+        );
+
+
+    if (
+        navAbout
+    ) {
+
+        navAbout.textContent =
+            'شعارنا';
+
+    }
+
+
+    if (
+        navProducts
+    ) {
+
+        navProducts.addEventListener(
+            'click',
+            showProducts
+        );
+
+    }
+
+
+    if (
+        navAbout
+    ) {
+
+        navAbout.addEventListener(
+            'click',
+            showAbout
+        );
+
+    }
+
+
+    if (
+        navPricing
+    ) {
+
+        navPricing.addEventListener(
+            'click',
+            showPricingAndLoad
+        );
+
+    }
+
+
+    if (
+        navProducts
+    ) {
+
+        navProducts.classList.add(
+            'active'
+        );
+
+    }
+}
+
+
+// ============================================================
+// LOGO POSITION
+// ============================================================
+
+function setLogoPosition(
+    position
+) {
+
+    if (
+        !labLogo
+    ) {
+
+        return;
+
+    }
+
+
+    labLogo.classList.remove(
+        'position-left',
+        'position-right',
+        'position-center'
+    );
+
+
+    labLogo.classList.add(
+        `position-${position}`
+    );
+
+
+    currentLogoPosition =
+        position;
+}
+
+
+// ============================================================
+// MUSIC
+// ============================================================
+
+function setupMusic() {
+
+    if (
+        !musicControl ||
+        !backgroundMusic
+    ) {
+
+        return;
+
+    }
+
+
+    backgroundMusic.src =
+        storageUrl(
+            AUDIO_PATH
+        );
+
+
+    backgroundMusic.loop =
+        true;
+
+
+    backgroundMusic.preload =
+        'auto';
+
+
+    function updateButton() {
+
+        musicControl.innerHTML =
+            isMusicPlaying
+
+                ? '<i class="fas fa-pause"></i>'
+
+                : '<i class="fas fa-music"></i>';
+
+    }
+
+
+    async function tryPlay() {
+
+        try {
+
+            await backgroundMusic.play();
+
+            isMusicPlaying =
+                true;
+
+            updateButton();
+
+        }
+        catch {
+
+            isMusicPlaying =
+                false;
+
+            updateButton();
+
+        }
+
+    }
+
+
+    musicControl.addEventListener(
+        'click',
+        async event => {
+
+            event.stopPropagation();
+
+
+            if (
+                backgroundMusic.paused
+            ) {
+
+                await tryPlay();
+
+            }
+
+            else {
+
+                backgroundMusic.pause();
+
+            }
+
+        }
+    );
+
+
+    backgroundMusic.addEventListener(
+        'play',
+        () => {
+
+            isMusicPlaying =
+                true;
+
+            updateButton();
+
+        }
+    );
+
+
+    backgroundMusic.addEventListener(
+        'pause',
+        () => {
+
+            isMusicPlaying =
+                false;
+
+            updateButton();
+
+        }
+    );
+
+
+    document.addEventListener(
+        'pointerdown',
+        () => {
+
+            if (
+                backgroundMusic.paused
+            ) {
+
+                tryPlay();
+
+            }
+
+        },
+        {
+            once: true,
+            passive: true
+        }
+    );
+
+
+    updateButton();
+
+    tryPlay();
 }
 
 
@@ -1791,27 +3322,81 @@ function setupProjectToolbar() {
 
 document.addEventListener(
     'DOMContentLoaded',
-    () => {
+    async () => {
 
         setupMusic();
 
         setupProjectToolbar();
 
-        // الوضع الافتراضي - منتجاتنا (الشعار في اليسار)
-        setLogoPosition('left');
-        loadHeroImages();
         setupNavButtons();
 
-        // إخفاء السكرول في البداية
-        if (pricingScrollContainer) {
-            pricingScrollContainer.style.display = 'none';
+        setLogoPosition(
+            'left'
+        );
+
+
+        if (
+            pricingScrollContainer
+        ) {
+
+            pricingScrollContainer.style.display =
+                'none';
+
         }
 
-        // إعادة توسيط السكرول عند تغيير حجم النافذة
-        window.addEventListener('resize', () => {
-            if (pricingScrollContainer.style.display !== 'none') {
-                centerPricingScroll();
+
+        /*
+         * قراءة المشاريع مرة واحدة.
+         */
+
+        try {
+
+            await ensureProjectsLoaded();
+
+            renderProjects();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                'Initial projects load failed:',
+                error
+            );
+
+
+            if (
+                heroGrid
+            ) {
+
+                heroGrid.innerHTML = `
+
+                    <div
+                        class="empty-hint"
+                        style="grid-column:1/-1;"
+                    >
+
+                        <i
+                            class="fas fa-triangle-exclamation"
+                        ></i>
+
+                        <p>
+                            تعذر تحميل المشاريع
+                        </p>
+
+                    </div>
+
+                `;
+
             }
-        });
+
+        }
+
+
+        window.addEventListener(
+            'resize',
+            centerPricingScroll
+        );
+
     }
 );
