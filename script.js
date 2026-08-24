@@ -6,7 +6,7 @@ const SUPABASE_URL =
     'https://onmrexiyhzyytmfwbvsr.supabase.co';
 
 const SUPABASE_ANON_KEY =
-    'sb_publishable_kFcJ3JeFtjagz0aa-r2WRA_hUUOT8uU';
+    'sb_publishable_kFcJ3JeFtjagz0aa-r2WRA-hUUOT8uU';
 
 const SUPABASE_BUCKET =
     'dental-lab-portfolio';
@@ -25,6 +25,10 @@ const SUPABASE_HEADERS = {
 const PORTFOLIO_ROOT = 'portfolio';
 const PRICING_ROOT = 'pricing';
 const AUDIO_PATH = 'audio/background-music.mp3';
+
+// الصور العامة الثابتة من Supabase Storage
+const ABOUT_IMAGE_PATH = 'General photos/abute us.png';
+const LOGO_ICON_PATH = 'General photos/H EL M.png';
 
 
 // ============================================================
@@ -121,6 +125,26 @@ const backgroundMusic =
     document.getElementById(
         'backgroundMusic'
     );
+
+
+// ============================================================
+// GENERAL IMAGES
+// ============================================================
+
+function setupGeneralImages() {
+
+    if (labLogo) {
+
+        labLogo.src =
+            storageUrl(
+                LOGO_ICON_PATH
+            );
+
+        labLogo.alt =
+            'H EL M';
+
+    }
+}
 
 
 // ============================================================
@@ -1424,8 +1448,6 @@ function setupProjectToolbar() {
 
     }
 }
-
-
 // ============================================================
 // VIEWER - CREATE ONCE
 // ============================================================
@@ -1444,6 +1466,7 @@ function ensureViewer() {
     ) {
 
         return overlay;
+
     }
 
 
@@ -2597,8 +2620,6 @@ function viewerMouseUp() {
     }
 
 }
-
-
 // ============================================================
 // PRICING
 // ============================================================
@@ -2900,8 +2921,8 @@ function showAbout() {
             >
 
                 <img
-                    src="abute us.png"
-                    alt="شعار معمل حاتم المصري"
+                    src="${storageUrl(ABOUT_IMAGE_PATH)}"
+                    alt="About Us"
                     id="aboutLogoImage"
                 >
 
@@ -2994,17 +3015,22 @@ function showProducts() {
         heroGrid.style.flexDirection =
             '';
 
+
         heroGrid.style.justifyContent =
             '';
+
 
         heroGrid.style.alignItems =
             '';
 
+
         heroGrid.style.minHeight =
             '';
 
+
         heroGrid.style.width =
             '';
+
 
         heroGrid.style.padding =
             '';
@@ -3323,6 +3349,9 @@ function setupMusic() {
 document.addEventListener(
     'DOMContentLoaded',
     async () => {
+
+        // تحميل الصور العامة من Supabase
+        setupGeneralImages();
 
         setupMusic();
 
