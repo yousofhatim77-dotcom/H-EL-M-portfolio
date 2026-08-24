@@ -6,7 +6,7 @@ const SUPABASE_URL =
     'https://onmrexiyhzyytmfwbvsr.supabase.co';
 
 const SUPABASE_ANON_KEY =
-    'sb_publishable_kFcJ3JeFtjagz0aa-r2WRA-hUUOT8uU';
+    'sb_publishable_kFcJ3JeFtjagz0aa-r2WRA_hUUOT8uU';
 
 const SUPABASE_BUCKET =
     'dental-lab-portfolio';
@@ -24,11 +24,10 @@ const SUPABASE_HEADERS = {
 
 const PORTFOLIO_ROOT = 'portfolio';
 const PRICING_ROOT = 'pricing';
+const GENERAL_PHOTOS_ROOT = 'General photos';
+const ABOUT_IMAGE_PATH = `${GENERAL_PHOTOS_ROOT}/abute us.png`;
+const LAB_LOGO_PATH = `${GENERAL_PHOTOS_ROOT}/H EL M.png`;
 const AUDIO_PATH = 'audio/background-music.mp3';
-
-// الصور العامة الثابتة من Supabase Storage
-const ABOUT_IMAGE_PATH = 'General photos/abute us.png';
-const LOGO_ICON_PATH = 'General photos/H EL M.png';
 
 
 // ============================================================
@@ -125,26 +124,6 @@ const backgroundMusic =
     document.getElementById(
         'backgroundMusic'
     );
-
-
-// ============================================================
-// GENERAL IMAGES
-// ============================================================
-
-function setupGeneralImages() {
-
-    if (labLogo) {
-
-        labLogo.src =
-            storageUrl(
-                LOGO_ICON_PATH
-            );
-
-        labLogo.alt =
-            'H EL M';
-
-    }
-}
 
 
 // ============================================================
@@ -1448,6 +1427,8 @@ function setupProjectToolbar() {
 
     }
 }
+
+
 // ============================================================
 // VIEWER - CREATE ONCE
 // ============================================================
@@ -1466,7 +1447,6 @@ function ensureViewer() {
     ) {
 
         return overlay;
-
     }
 
 
@@ -2620,6 +2600,8 @@ function viewerMouseUp() {
     }
 
 }
+
+
 // ============================================================
 // PRICING
 // ============================================================
@@ -2922,7 +2904,7 @@ function showAbout() {
 
                 <img
                     src="${storageUrl(ABOUT_IMAGE_PATH)}"
-                    alt="About Us"
+                    alt="شعار معمل حاتم المصري"
                     id="aboutLogoImage"
                 >
 
@@ -3015,22 +2997,17 @@ function showProducts() {
         heroGrid.style.flexDirection =
             '';
 
-
         heroGrid.style.justifyContent =
             '';
-
 
         heroGrid.style.alignItems =
             '';
 
-
         heroGrid.style.minHeight =
             '';
 
-
         heroGrid.style.width =
             '';
-
 
         heroGrid.style.padding =
             '';
@@ -3349,9 +3326,6 @@ function setupMusic() {
 document.addEventListener(
     'DOMContentLoaded',
     async () => {
-
-        // تحميل الصور العامة من Supabase
-        setupGeneralImages();
 
         setupMusic();
 
