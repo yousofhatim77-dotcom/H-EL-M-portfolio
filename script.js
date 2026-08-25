@@ -2364,6 +2364,231 @@ function centerPricingScroll() {
 }
 
 
+let pricingZoomState = {
+    scale: 1,
+    pinchStartDistance: 0,
+    pinchStartScale: 1
+};
+
+
+function resetPricingZoom() {
+
+    pricingZoomState.scale = 1;
+    pricingZoomState.pinchStartDistance = 0;
+    pricingZoomState.pinchStartScale = 1;
+
+    if (pricingScrollWrapper) {
+
+        pricingScrollWrapper.style.transform = 'scale(1)';
+        pricingScrollWrapper.style.transformOrigin = 'center top';
+
+    }
+
+}
+
+
+function applyPricingZoom() {
+
+    if (!pricingScrollWrapper) {
+
+        return;
+    }
+
+
+    pricingZoomState.scale =
+        Math.min(
+            3,
+            Math.max(
+                1,
+                pricingZoomState.scale
+            )
+        );
+
+
+    pricingScrollWrapper.style.transform =
+        `scale(${pricingZoomState.scale})`;
+
+    pricingScrollWrapper.style.transformOrigin =
+        'center top';
+
+}
+
+
+function setupPricingZoom() {
+
+    if (
+        !pricingScrollWrapper ||
+        pricingScrollWrapper.dataset.pricingZoomBound === 'true'
+    ) {
+
+        return;
+    }
+
+
+    pricingScrollWrapper.dataset.pricingZoomBound = 'true';
+
+
+    pricingScrollWrapper.addEventListener(
+        'touchstart',
+        event => {
+
+            if (
+                event.touches.length ===
+                2
+            ) {
+
+                const a =
+                    event.touches[0];
+
+                const b =
+                    event.touches[1];
+
+                const dx =
+                    b.clientX - a.clientX;
+
+                const dy =
+                    b.clientY - a.clientY;
+
+                pricingZoomState.pinchStartDistance =
+                    Math.hypot(dx, dy);
+
+                pricingZoomState.pinchStartScale =
+                    pricingZoomState.scale;
+
+            }
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    pricingScrollWrapper.addEventListener(
+        'touchmove',
+        event => {
+
+            if (
+                event.touches.length ===
+                2 &&
+                pricingZoomState.pinchStartDistance > 0
+            ) {
+
+                event.preventDefault();
+
+                const a =
+                    event.touches[0];
+
+                const b =
+                    event.touches[1];
+
+                const dx =
+                    b.clientX - a.clientX;
+
+                const dy =
+                    b.clientY - a.clientY;
+
+                const distance =
+                    Math.hypot(dx, dy);
+
+                pricingZoomState.scale =
+                    (distance / pricingZoomState.pinchStartDistance) * pricingZoomState.pinchStartScale;
+
+                applyPricingZoom();
+
+            }
+
+        },
+        {
+            passive: false
+        }
+    );
+
+
+    pricingScrollWrapper.addEventListener(
+        'touchend',
+        () => {
+
+            pricingZoomState.pinchStartDistance = 0;
+            pricingZoomState.pinchStartScale = 1;
+
+            if (
+                pricingZoomState.scale < 1.05
+            ) {
+
+                resetPricingZoom();
+
+            }
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    pricingScrollWrapper.addEventListener(
+        'wheel',
+        event => {
+
+            if (
+                !event.ctrlKey
+            ) {
+
+                return;
+
+            }
+
+
+            event.preventDefault();
+
+            pricingZoomState.scale =
+                Math.min(
+                    3,
+                    Math.max(
+                        1,
+                        pricingZoomState.scale +
+                        (event.deltaY > 0 ? -0.12 : 0.12)
+                    )
+                );
+
+            applyPricingZoom();
+
+        },
+        {
+            passive: false
+        }
+    );
+
+
+    pricingScrollWrapper.addEventListener(
+        'dblclick',
+        () => {
+
+            if (
+                pricingZoomState.scale > 1
+            ) {
+
+                resetPricingZoom();
+
+            }
+
+            else {
+
+                pricingZoomState.scale = 2;
+                applyPricingZoom();
+
+            }
+
+        }
+    );
+
+
+    resetPricingZoom();
+
+}
+
+
 function renderPricing() {
 
     if (
@@ -2371,7 +2596,6 @@ function renderPricing() {
     ) {
 
         return;
-
     }
 
 
@@ -2461,11 +2685,13 @@ function renderPricing() {
     );
 
 
+    setupPricingZoom();
+
+
     requestAnimationFrame(
         centerPricingScroll
     );
 }
-
 
 function showPricing() {
 
