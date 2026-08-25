@@ -2393,6 +2393,7 @@ function resetPricingZoom() {
 
     if (pricingScrollWrapper) {
 
+        pricingScrollWrapper.classList.remove('pricing-zoomed');
         pricingScrollWrapper.style.transform = 'translate(0px, 0px) scale(1)';
         pricingScrollWrapper.style.transformOrigin = 'center top';
 
@@ -2417,6 +2418,12 @@ function applyPricingZoom() {
                 pricingZoomState.scale
             )
         );
+
+
+    pricingScrollWrapper.classList.toggle(
+        'pricing-zoomed',
+        pricingZoomState.scale > 1
+    );
 
 
     pricingScrollWrapper.style.transform =
@@ -2480,6 +2487,20 @@ function setupPricingZoom() {
                 event.touches.length ===
                 1
             ) {
+
+                if (
+                    pricingZoomState.scale <= 1
+                ) {
+
+                    pricingZoomState.dragStart = null;
+                    pricingZoomState.dragStartOffset = {
+                        x: pricingZoomState.offsetX,
+                        y: pricingZoomState.offsetY
+                    };
+
+                    return;
+
+                }
 
                 pricingZoomState.dragStart = {
                     x: event.touches[0].clientX,
@@ -2554,15 +2575,6 @@ function setupPricingZoom() {
                 const deltaY =
                     touch.clientY -
                     pricingZoomState.dragStart.y;
-
-                if (
-                    Math.abs(deltaY) >
-                    Math.abs(deltaX)
-                ) {
-
-                    return;
-
-                }
 
                 event.preventDefault();
 
