@@ -2366,20 +2366,34 @@ function centerPricingScroll() {
 
 let pricingZoomState = {
     scale: 1,
+    offsetX: 0,
+    offsetY: 0,
     pinchStartDistance: 0,
-    pinchStartScale: 1
+    pinchStartScale: 1,
+    dragStart: null,
+    dragStartOffset: {
+        x: 0,
+        y: 0
+    }
 };
 
 
 function resetPricingZoom() {
 
     pricingZoomState.scale = 1;
+    pricingZoomState.offsetX = 0;
+    pricingZoomState.offsetY = 0;
     pricingZoomState.pinchStartDistance = 0;
     pricingZoomState.pinchStartScale = 1;
+    pricingZoomState.dragStart = null;
+    pricingZoomState.dragStartOffset = {
+        x: 0,
+        y: 0
+    };
 
     if (pricingScrollWrapper) {
 
-        pricingScrollWrapper.style.transform = 'scale(1)';
+        pricingScrollWrapper.style.transform = 'translate(0px, 0px) scale(1)';
         pricingScrollWrapper.style.transformOrigin = 'center top';
 
     }
@@ -2406,7 +2420,7 @@ function applyPricingZoom() {
 
 
     pricingScrollWrapper.style.transform =
-        `scale(${pricingZoomState.scale})`;
+        `translate(${pricingZoomState.offsetX}px, ${pricingZoomState.offsetY}px) scale(${pricingZoomState.scale})`;
 
     pricingScrollWrapper.style.transformOrigin =
         'center top';
@@ -2455,6 +2469,28 @@ function setupPricingZoom() {
                 pricingZoomState.pinchStartScale =
                     pricingZoomState.scale;
 
+                pricingZoomState.dragStart = null;
+
+                return;
+
+            }
+
+
+            if (
+                event.touches.length ===
+                1
+            ) {
+
+                pricingZoomState.dragStart = {
+                    x: event.touches[0].clientX,
+                    y: event.touches[0].clientY
+                };
+
+                pricingZoomState.dragStartOffset = {
+                    x: pricingZoomState.offsetX,
+                    y: pricingZoomState.offsetY
+                };
+
             }
 
         },
@@ -2496,6 +2532,50 @@ function setupPricingZoom() {
 
                 applyPricingZoom();
 
+                return;
+
+            }
+
+
+            if (
+                event.touches.length ===
+                1 &&
+                pricingZoomState.scale > 1 &&
+                pricingZoomState.dragStart
+            ) {
+
+                const touch =
+                    event.touches[0];
+
+                const deltaX =
+                    touch.clientX -
+                    pricingZoomState.dragStart.x;
+
+                const deltaY =
+                    touch.clientY -
+                    pricingZoomState.dragStart.y;
+
+                if (
+                    Math.abs(deltaY) >
+                    Math.abs(deltaX)
+                ) {
+
+                    return;
+
+                }
+
+                event.preventDefault();
+
+                pricingZoomState.offsetX =
+                    pricingZoomState.dragStartOffset.x +
+                    deltaX;
+
+                pricingZoomState.offsetY =
+                    pricingZoomState.dragStartOffset.y +
+                    deltaY;
+
+                applyPricingZoom();
+
             }
 
         },
@@ -2511,6 +2591,11 @@ function setupPricingZoom() {
 
             pricingZoomState.pinchStartDistance = 0;
             pricingZoomState.pinchStartScale = 1;
+            pricingZoomState.dragStart = null;
+            pricingZoomState.dragStartOffset = {
+                x: pricingZoomState.offsetX,
+                y: pricingZoomState.offsetY
+            };
 
             if (
                 pricingZoomState.scale < 1.05
