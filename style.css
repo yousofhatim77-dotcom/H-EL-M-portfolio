@@ -585,6 +585,15 @@ video {
 
     -webkit-overflow-scrolling:
         touch;
+
+    transform-origin:
+        center top;
+
+    transition:
+        transform .12s ease;
+
+    touch-action:
+        pan-y;
 }
 
 .pricing-scroll-wrapper::-webkit-scrollbar {
@@ -648,6 +657,9 @@ video {
 
     overflow:
         hidden;
+
+    touch-action:
+        pan-y;
 }
 
 .pricing-page-image img {
@@ -686,6 +698,26 @@ video {
 
     cursor:
         default;
+
+    transform-origin:
+        center center;
+
+    transition:
+        transform .12s ease;
+
+    user-select:
+        none;
+
+    -webkit-user-drag:
+        none;
+
+    touch-action:
+        none;
+}
+
+.pricing-page-image.pricing-zoomed {
+    cursor:
+        grab;
 }
 
 .pricing-page-image img:hover {
@@ -1935,8 +1967,11 @@ textarea.input {
     top:
         12px;
 
-    left:
+    right:
         12px;
+
+    left:
+        auto;
 
     z-index:
         30;
