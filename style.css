@@ -295,8 +295,8 @@ video {
         translate(-50%, -50%)
         scale(1.3);
 
-    width: 160px;
-    height: 160px;
+    width: 80px;
+    height: 80px;
 
     border-color:
         var(--blue-ll);
@@ -502,7 +502,7 @@ video {
         0;
 
     padding:
-        14px 16px;
+        10px 12px 12px;
 
     background:
         linear-gradient(
@@ -515,10 +515,13 @@ video {
         var(--text);
 
     font-size:
-        1rem;
+        .72rem;
 
     font-weight:
         700;
+
+    line-height:
+        1.3;
 
     text-align:
         center;
@@ -565,14 +568,34 @@ video {
     width:
         100%;
 
-    overflow:
-        visible;
+    overflow-x:
+        hidden;
+
+    overflow-y:
+        auto;
 
     padding:
-        0;
+        8px 0 10px;
 
     margin:
         0;
+
+    scrollbar-width:
+        none;
+
+    -webkit-overflow-scrolling:
+        touch;
+}
+
+.pricing-scroll-wrapper::-webkit-scrollbar {
+    width:
+        0;
+
+    height:
+        0;
+
+    display:
+        none;
 }
 
 .pricing-scroll-track {
@@ -586,7 +609,7 @@ video {
         column;
 
     gap:
-        0;
+        12px;
 
     padding:
         0;
@@ -599,6 +622,9 @@ video {
 }
 
 .pricing-page-image {
+    flex:
+        0 0 auto;
+
     width:
         100%;
 
@@ -612,7 +638,7 @@ video {
         0;
 
     border-radius:
-        0;
+        12px;
 
     background:
         transparent;
@@ -621,7 +647,7 @@ video {
         none;
 
     overflow:
-        visible;
+        hidden;
 }
 
 .pricing-page-image img {
@@ -650,7 +676,7 @@ video {
         0;
 
     border-radius:
-        0;
+        12px;
 
     background:
         transparent;
@@ -1952,6 +1978,12 @@ textarea.input {
 
     transition:
         .2s ease;
+
+    opacity:
+        1;
+
+    visibility:
+        visible;
 }
 
 .viewer-close:hover {
@@ -2426,18 +2458,37 @@ textarea.input {
 
     .hero-grid {
         grid-template-columns:
-            repeat(2, 1fr);
+            repeat(2, minmax(0, 1fr));
 
         gap:
             12px;
 
         padding:
             0 10px;
+
+        align-items:
+            stretch;
     }
 
     .hero-item {
         min-height:
             120px;
+
+        aspect-ratio:
+            1 / 1.05;
+    }
+
+    .hero-label {
+        font-size:
+            .62rem;
+
+        padding:
+            8px 9px 10px;
+    }
+
+    .pricing-page-image {
+        width:
+            100%;
     }
 
     .nav-buttons {
