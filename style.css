@@ -594,6 +594,9 @@ video {
 
     touch-action:
         pan-y;
+
+    overscroll-behavior:
+        contain;
 }
 
 .pricing-scroll-wrapper::-webkit-scrollbar {
