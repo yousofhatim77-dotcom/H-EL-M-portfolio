@@ -1476,8 +1476,6 @@ function ensureViewer() {
             aria-modal="true"
         >
 
-            <!-- CLOSE -->
-
             <button
                 class="viewer-close"
                 id="viewerClose"
@@ -1493,8 +1491,6 @@ function ensureViewer() {
             </button>
 
 
-            <!-- TOP BAR -->
-
             <div
                 class="viewer-top-bar"
             >
@@ -1506,74 +1502,8 @@ function ensureViewer() {
                     1 / 1
                 </span>
 
-
-                <div
-                    class="viewer-zoom-btns"
-                >
-
-                    <button
-                        class="vzoom-btn"
-                        id="vzoomIn"
-                        type="button"
-                        title="تكبير"
-                    >
-
-                        <i
-                            class="fas fa-search-plus"
-                        ></i>
-
-                    </button>
-
-
-                    <button
-                        class="vzoom-btn"
-                        id="vzoomOut"
-                        type="button"
-                        title="تصغير"
-                    >
-
-                        <i
-                            class="fas fa-search-minus"
-                        ></i>
-
-                    </button>
-
-
-                    <button
-                        class="vzoom-btn"
-                        id="vzoomReset"
-                        type="button"
-                        title="إعادة ضبط"
-                    >
-
-                        <i
-                            class="fas fa-compress"
-                        ></i>
-
-                    </button>
-
-
-                    <a
-                        class="viewer-open-btn"
-                        id="viewerOpen"
-                        href="#"
-                        target="_blank"
-                        rel="noopener"
-                        title="فتح الصورة"
-                    >
-
-                        <i
-                            class="fas fa-external-link-alt"
-                        ></i>
-
-                    </a>
-
-                </div>
-
             </div>
 
-
-            <!-- IMAGE AREA -->
 
             <div
                 class="viewer-img-area"
@@ -1590,42 +1520,6 @@ function ensureViewer() {
 
             </div>
 
-
-            <!-- PREVIOUS -->
-
-            <button
-                class="viewer-nav viewer-prev"
-                id="viewerPrev"
-                type="button"
-                aria-label="الصورة السابقة"
-                title="الصورة السابقة"
-            >
-
-                <i
-                    class="fas fa-chevron-right"
-                ></i>
-
-            </button>
-
-
-            <!-- NEXT -->
-
-            <button
-                class="viewer-nav viewer-next"
-                id="viewerNext"
-                type="button"
-                aria-label="الصورة التالية"
-                title="الصورة التالية"
-            >
-
-                <i
-                    class="fas fa-chevron-left"
-                ></i>
-
-            </button>
-
-
-            <!-- DESCRIPTION -->
 
             <div
                 class="viewer-description"
@@ -1669,42 +1563,6 @@ function bindViewerEvents(
         );
 
 
-    const previousButton =
-        document.getElementById(
-            'viewerPrev'
-        );
-
-
-    const nextButton =
-        document.getElementById(
-            'viewerNext'
-        );
-
-
-    const zoomInButton =
-        document.getElementById(
-            'vzoomIn'
-        );
-
-
-    const zoomOutButton =
-        document.getElementById(
-            'vzoomOut'
-        );
-
-
-    const zoomResetButton =
-        document.getElementById(
-            'vzoomReset'
-        );
-
-
-    const viewerOpenButton =
-        document.getElementById(
-            'viewerOpen'
-        );
-
-
     const imageArea =
         document.getElementById(
             'viewerImgArea'
@@ -1717,210 +1575,24 @@ function bindViewerEvents(
         );
 
 
-    /*
-     * CLOSE
-     */
+    if (
+        closeButton
+    ) {
 
-    closeButton.onclick =
-        event => {
+        closeButton.onclick =
+            event => {
 
-            event.preventDefault();
-            event.stopPropagation();
+                event.preventDefault();
+                event.stopPropagation();
 
-            closeViewer();
-
-        };
-
-
-    /*
-     * PREVIOUS
-     */
-
-    previousButton.onclick =
-        event => {
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            navigateViewer(
-                -1
-            );
-
-        };
-
-
-    /*
-     * NEXT
-     */
-
-    nextButton.onclick =
-        event => {
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            navigateViewer(
-                1
-            );
-
-        };
-
-
-    /*
-     * ZOOM IN
-     */
-
-    zoomInButton.onclick =
-        event => {
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            changeViewerZoom(
-                0.2
-            );
-
-        };
-
-
-    /*
-     * ZOOM OUT
-     */
-
-    zoomOutButton.onclick =
-        event => {
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            changeViewerZoom(
-                -0.2
-            );
-
-        };
-
-
-    /*
-     * RESET
-     */
-
-    zoomResetButton.onclick =
-        event => {
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            viewerZoom =
-                1;
-
-
-            viewerOffset = {
-                x: 0,
-                y: 0
-            };
-
-
-            applyViewerTransform();
-
-        };
-
-
-    /*
-     * Open external
-     */
-
-    viewerOpenButton.onclick =
-        event => {
-
-            event.stopPropagation();
-
-        };
-
-
-    /*
-     * Mouse wheel
-     */
-
-    imageArea.addEventListener(
-        'wheel',
-        event => {
-
-            event.preventDefault();
-
-            changeViewerZoom(
-                event.deltaY < 0
-                    ? 0.15
-                    : -0.15
-            );
-
-        },
-        {
-            passive: false
-        }
-    );
-
-
-    /*
-     * Drag
-     */
-
-    image.addEventListener(
-        'mousedown',
-        event => {
-
-            if (
-                viewerZoom <= 1
-            ) {
-
-                return;
-
-            }
-
-
-            viewerDragging =
-                true;
-
-
-            viewerDragStart = {
-
-                x:
-                    event.clientX -
-                    viewerOffset.x,
-
-                y:
-                    event.clientY -
-                    viewerOffset.y
+                closeViewer();
 
             };
 
-
-            image.style.cursor =
-                'grabbing';
+    }
 
 
-            event.preventDefault();
-
-        }
-    );
-
-
-    document.addEventListener(
-        'mousemove',
-        viewerMouseMove
-    );
-
-
-    document.addEventListener(
-        'mouseup',
-        viewerMouseUp
-    );
-
-
-    /*
-     * Touch
-     */
-
-    let pinchDistance = null;
+    let swipeStart = null;
 
 
     imageArea.addEventListener(
@@ -1928,45 +1600,73 @@ function bindViewerEvents(
         event => {
 
             if (
-                event.touches.length ===
-                2
+                event.touches.length !==
+                1
             ) {
 
-                pinchDistance =
-                    Math.hypot(
-                        event.touches[0].clientX -
-                        event.touches[1].clientX,
-
-                        event.touches[0].clientY -
-                        event.touches[1].clientY
-                    );
+                swipeStart = null;
+                return;
 
             }
 
 
-            else if (
-                event.touches.length ===
-                    1 &&
-                viewerZoom > 1
+            swipeStart = {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY
+            };
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    imageArea.addEventListener(
+        'touchend',
+        event => {
+
+            if (
+                !swipeStart ||
+                event.changedTouches.length !==
+                1
             ) {
 
-                viewerDragging =
-                    true;
-
-
-                viewerDragStart = {
-
-                    x:
-                        event.touches[0].clientX -
-                        viewerOffset.x,
-
-                    y:
-                        event.touches[0].clientY -
-                        viewerOffset.y
-
-                };
+                swipeStart = null;
+                return;
 
             }
+
+
+            const touch =
+                event.changedTouches[0];
+
+            const deltaX =
+                touch.clientX -
+                swipeStart.x;
+
+            const deltaY =
+                touch.clientY -
+                swipeStart.y;
+
+
+            if (
+                Math.abs(deltaX) >
+                50 &&
+                Math.abs(deltaX) >
+                Math.abs(deltaY)
+            ) {
+
+                navigateViewer(
+                    deltaX < 0
+                        ? 1
+                        : -1
+                );
+
+            }
+
+
+            swipeStart = null;
 
         },
         {
@@ -1981,54 +1681,14 @@ function bindViewerEvents(
 
             if (
                 event.touches.length ===
-                    2 &&
-                pinchDistance !== null
+                1 &&
+                Math.abs(
+                    event.touches[0].clientX -
+                    (swipeStart ? swipeStart.x : event.touches[0].clientX)
+                ) > 18
             ) {
 
                 event.preventDefault();
-
-
-                const distance =
-                    Math.hypot(
-                        event.touches[0].clientX -
-                        event.touches[1].clientX,
-
-                        event.touches[0].clientY -
-                        event.touches[1].clientY
-                    );
-
-
-                changeViewerZoom(
-                    (
-                        distance -
-                        pinchDistance
-                    ) * 0.005
-                );
-
-
-                pinchDistance =
-                    distance;
-
-            }
-
-
-            else if (
-                event.touches.length ===
-                    1 &&
-                viewerDragging
-            ) {
-
-                viewerOffset.x =
-                    event.touches[0].clientX -
-                    viewerDragStart.x;
-
-
-                viewerOffset.y =
-                    event.touches[0].clientY -
-                    viewerDragStart.y;
-
-
-                applyViewerTransform();
 
             }
 
@@ -2039,23 +1699,72 @@ function bindViewerEvents(
     );
 
 
-    imageArea.addEventListener(
-        'touchend',
-        () => {
+    image.addEventListener(
+        'mousedown',
+        event => {
 
-            viewerDragging =
-                false;
+            if (
+                event.button !==
+                0
+            ) {
 
-            pinchDistance =
-                null;
+                return;
+
+            }
+
+
+            swipeStart = {
+                x: event.clientX,
+                y: event.clientY
+            };
 
         }
     );
 
 
-    /*
-     * Keyboard
-     */
+    image.addEventListener(
+        'mouseup',
+        event => {
+
+            if (
+                !swipeStart
+            ) {
+
+                return;
+
+            }
+
+
+            const deltaX =
+                event.clientX -
+                swipeStart.x;
+
+            const deltaY =
+                event.clientY -
+                swipeStart.y;
+
+
+            if (
+                Math.abs(deltaX) >
+                50 &&
+                Math.abs(deltaX) >
+                Math.abs(deltaY)
+            ) {
+
+                navigateViewer(
+                    deltaX < 0
+                        ? 1
+                        : -1
+                );
+
+            }
+
+
+            swipeStart = null;
+
+        }
+    );
+
 
     document.addEventListener(
         'keydown',
@@ -2074,7 +1783,6 @@ function bindViewerEvents(
             ) {
 
                 return;
-
             }
 
 
@@ -2087,7 +1795,6 @@ function bindViewerEvents(
 
             }
 
-
             else if (
                 event.key ===
                 'ArrowRight'
@@ -2098,7 +1805,6 @@ function bindViewerEvents(
                 );
 
             }
-
 
             else if (
                 event.key ===
@@ -2111,37 +1817,9 @@ function bindViewerEvents(
 
             }
 
-
-            else if (
-                event.key ===
-                '+'
-            ) {
-
-                changeViewerZoom(
-                    0.2
-                );
-
-            }
-
-
-            else if (
-                event.key ===
-                '-'
-            ) {
-
-                changeViewerZoom(
-                    -0.2
-                );
-
-            }
-
         }
     );
 
-
-    /*
-     * Prevent viewer content from closing it.
-     */
 
     const viewerBox =
         overlay.querySelector(
@@ -2159,6 +1837,7 @@ function bindViewerEvents(
     );
 
 }
+
 
 
 // ============================================================
@@ -2642,6 +2321,49 @@ async function ensurePricingLoaded() {
 }
 
 
+function centerPricingScroll() {
+
+    if (
+        !pricingScrollContainer ||
+        !pricingScrollTrack
+    ) {
+
+        return;
+
+    }
+
+
+    const wrapper =
+        pricingScrollContainer.querySelector(
+            '.pricing-scroll-wrapper'
+        );
+
+
+    if (
+        !wrapper
+    ) {
+
+        return;
+
+    }
+
+
+    const maxScroll =
+        wrapper.scrollWidth -
+        wrapper.clientWidth;
+
+
+    if (
+        maxScroll > 0
+    ) {
+
+        wrapper.scrollLeft =
+            maxScroll / 2;
+
+    }
+}
+
+
 function renderPricing() {
 
     if (
@@ -2737,10 +2459,26 @@ function renderPricing() {
     pricingScrollTrack.appendChild(
         fragment
     );
+
+
+    requestAnimationFrame(
+        centerPricingScroll
+    );
 }
 
 
 function showPricing() {
+
+    const button =
+        document.getElementById(
+            'navPricingBtn'
+        );
+
+
+    activateNav(
+        button
+    );
+
 
     if (
         heroGrid
@@ -2760,6 +2498,11 @@ function showPricing() {
             'flex';
 
     }
+
+
+    document.body.classList.remove(
+        'about-view-active'
+    );
 
 
     if (
@@ -2779,6 +2522,17 @@ function showPricing() {
 
 async function showPricingAndLoad() {
 
+    const button =
+        document.getElementById(
+            'navPricingBtn'
+        );
+
+
+    activateNav(
+        button
+    );
+
+
     if (
         heroGrid
     ) {
@@ -2797,6 +2551,11 @@ async function showPricingAndLoad() {
             'flex';
 
     }
+
+
+    document.body.classList.remove(
+        'about-view-active'
+    );
 
 
     try {
@@ -2861,6 +2620,11 @@ function showAbout() {
 
     activateNav(
         button
+    );
+
+
+    document.body.classList.add(
+        'about-view-active'
     );
 
 
@@ -2984,6 +2748,11 @@ function showProducts() {
             'none';
 
     }
+
+
+    document.body.classList.remove(
+        'about-view-active'
+    );
 
 
     if (
